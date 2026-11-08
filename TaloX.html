@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaloX · XTERNUM</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    :root {
+      --xt-verde: #22c55e;
+      --xt-verde-hover: #16a34a;
+      --xt-verde-fondo: #dcfce7;
+      --xt-fondo: #F4F6F2;
+      --xt-blanco: #FFFFFF;
+      --xt-texto: #1D1D1B;
+      --xt-texto-muted: #575756;
+      --xt-borde: #E2E5DF;
+      --xt-alerta: #991b1b;
+      --xt-alerta-fondo: #fee2e2;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    iframe#netlify-drawer-frame, [data-netlify-drawer], div[class*="netlify-drawer"] {
+      display: none !important;
+    }
+
+    body {
+      font-family: 'Lato', Arial, sans-serif;
+      background-color: var(--xt-fondo);
+      color: var(--xt-texto);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+    }
+
+    /* HEADER AJUSTADO PARA BLANCO PURO */
+    header {
+      background: var(--xt-blanco);
+      border-bottom: 2px solid var(--xt-borde);
+      padding: 8px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-img {
+      height: 28px;
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .avatar-header {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .talox-title {
+      color: var(--xt-texto);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--xt-borde);
+      color: var(--xt-texto-muted);
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background .15s;
+    }
+    .btn-reset:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .config-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .config-pill {
+      background: transparent;
+      border: 1px solid var(--xt-borde);
+      color: var(--xt-texto-muted);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .config-pill:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .status-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    .status-pill.online {
+      background: var(--xt-verde-fondo);
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .status-pill.offline {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }
+
+    /* MODAL DE CONFIGURACIÓN */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: var(--xt-blanco);
+      padding: 24px;
+      border-radius: 8px;
+      width: 320px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal-content h3 { margin-bottom: 8px; font-size: 14px; }
+    .modal-content label { font-size: 11px; font-weight: 700; color: var(--xt-texto-muted); text-transform: uppercase;}
+    .modal-content input {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--xt-borde); border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none;
+    }
+    .modal-content input:focus { border-color: var(--xt-verde); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .btn-cancel { background: #e2e8f0; color: var(--xt-texto); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 700; font-size: 11px; text-transform: uppercase;}
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .panel-chat {
+      width: 65%;
+      background: var(--xt-blanco);
+      border-right: 1px solid var(--xt-borde);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-scroll {
+      flex: 1 1 auto;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* SEPARADOR ARRASTRABLE */
+    .resizer {
+      height: 6px;
+      background: var(--xt-borde);
+      cursor: ns-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .resizer:hover, .resizer.active {
+      background: var(--xt-verde);
+    }
+
+    .chat-input-bar {
+      flex: 0 0 auto;
+      padding: 16px 24px;
+      background: var(--xt-fondo);
+      border-top: 1px solid var(--xt-borde);
+      min-height: 80px;
+    }
+
+    .chat-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .chat-row.user {
+      justify-content: flex-end;
+    }
+
+    .avatar-espartano {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid var(--xt-verde);
+      flex-shrink: 0;
+      background: #0b1120;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar-espartano svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .bubble {
+      max-width: 84%;
+      padding: 13px 17px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+    .bubble.talox {
+      background: var(--xt-fondo);
+      border: 1px solid var(--xt-borde);
+      color: var(--xt-texto);
+      border-top-left-radius: 2px;
+    }
+    .bubble.user {
+      background: var(--xt-texto);
+      color: var(--xt-blanco);
+      border-top-right-radius: 2px;
+      white-space: pre-wrap;
+    }
+
+    .bubble pre {
+      position: relative;
+      padding-top: 36px !important;
+      background: #1e293b;
+      color: #f8fafc;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    .bubble pre code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    .code-toolbar {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      background: #334155;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+      user-select: none;
+    }
+    .code-btn {
+      background: transparent;
+      border: 1px solid #64748b;
+      color: #f8fafc;
+      font-size: 10.5px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 4px 8px;
+      transition: background 0.15s;
+    }
+    .code-btn:hover {
+      background: var(--xt-verde);
+      border-color: var(--xt-verde);
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      height: 100%;
+    }
+    .chat-form textarea {
+      flex: 1;
+      background: var(--xt-blanco);
+      border: 1px solid var(--xt-borde);
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 13.5px;
+      font-family: inherit;
+      outline: none;
+      resize: none;
+      height: 100%;
+      line-height: 1.4;
+      transition: border-color 0.2s;
+    }
+    .chat-form textarea:focus {
+      border-color: var(--xt-verde);
+    }
+    .btn-send {
+      background: var(--xt-verde);
+      color: var(--xt-blanco);
+      border: none;
+      padding: 0 20px;
+      height: 45px;
+      border-radius: 6px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-send:hover:not(:disabled) {
+      background: var(--xt-verde-hover);
+    }
+    .btn-send:disabled {
+      background: #c4c8c1;
+      cursor: not-allowed;
+    }
+
+    .panel-canvas {
+      width: 35%;
+      background: var(--xt-fondo);
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card {
+      background: var(--xt-blanco);
+      border: 1px solid var(--xt-borde);
+      border-radius: 8px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--xt-borde);
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .card-header h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--xt-texto);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .field-lbl {
+      display: block;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--xt-texto-muted);
+      margin-bottom: 4px;
+    }
+    .field-val {
+  background: #f8fafc; /* Gris muy sutil, casi blanco */
+  border: 1px solid var(--xt-borde);
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--xt-texto);
+}
+   .field-block {
+  background: #f8fafc; 
+  border: 1px solid var(--xt-borde);
+  border-radius: 5px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 50px;
+  color: var(--xt-texto);
+}
+
+    .insignia {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .insignia-status {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    .insignia-ready {
+      background: var(--xt-verde-fondo);
+      color: #15803d;
+      border: 1px solid #a7f3d0;
+    }
+    .insignia-verde {
+      background: var(--xt-verde-fondo);
+      color: #15803d;
+      border: 1px solid #a7f3d0;
+    }
+
+    .blocker-box {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: var(--xt-alerta-fondo);
+      border: 1px solid #fca5a5;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--xt-alerta);
+      display: none;
+    }
+    .blocker-box strong {
+      font-family: 'Montserrat', sans-serif;
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-size: 10.5px;
+    }
+
+    .task-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--xt-blanco);
+      border: 1px solid var(--xt-borde);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+
+    .btn-exec {
+      width: 100%;
+      background: var(--xt-verde);
+      color: var(--xt-blanco);
+      border: none;
+      padding: 13px 20px;
+      border-radius: 6px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-exec:hover:not(:disabled) {
+      background: var(--xt-verde-hover);
+    }
+    .btn-exec:disabled {
+      background: #C4C8C1;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MODAL DE CONFIGURACIÓN -->
+  <div id="configModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Configuración TaloX</h3>
+      
+      <label>Supabase URL</label>
+      <input type="text" id="sbUrl" placeholder="https://xyz.supabase.co">
+      
+      <label>Anon Key</label>
+      <input type="password" id="sbKey" placeholder="ey...">
+      
+      <label>Webhook n8n</label>
+      <input type="text" id="webhookInput" placeholder="https://...">
+      
+      <div class="modal-actions">
+        <button onclick="closeConfigModal()" class="btn-cancel">Cancelar</button>
+        <button onclick="saveConfigModal()" class="btn-send">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="brand-wrap">
+      <img src="https://cdn.prod.website-files.com/62dc95d6b127ce2124d096e6/62dc9688d0fe361d899b4dd5_Logo-p-500.png" alt="Xternum" class="logo-img";">
+      <img src="https://xternum-talox.netlify.app/talox-avatar.png" class="avatar-header" alt="Avatar">
+      <span class="talox-title">TaloX</span>
+    </div>
+
+    <div class="config-bar">
+      <span id="supabaseStatus" class="status-pill offline">Supabase: Conectando...</span>
+      
+      <button onclick="openConfigModal()" class="config-pill" id="pillSbUrl">🔴 Supabase URL</button>
+      <button onclick="openConfigModal()" class="config-pill" id="pillSbKey">🔴 Anon Key</button>
+      <button onclick="openConfigModal()" class="config-pill" id="pillWebhook">🔴 n8n Webhook</button>
+      
+      <button onclick="nuevaSesion()" class="btn-reset" title="Iniciar un nuevo encuadre en blanco">
+        ↺ Nueva Sesión
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel-chat">
+      <div id="chatHistory" class="chat-scroll">
+        <div class="chat-row">
+          <div class="avatar-espartano">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="bronzeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#f59e0b" />
+                  <stop offset="45%" stop-color="#d97706" />
+                  <stop offset="85%" stop-color="#92400e" />
+                  <stop offset="100%" stop-color="#78350f" />
+                </linearGradient>
+                <linearGradient id="crestGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#00A551" />
+                  <stop offset="50%" stop-color="#10b981" />
+                  <stop offset="100%" stop-color="#008742" />
+                </linearGradient>
+                <filter id="eyeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="1.2" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+              <circle cx="50" cy="50" r="48" fill="#0b1120" />
+              <path d="M50 4 C40 4 33 11 31 22 C41 16 59 16 69 22 C67 11 60 4 50 4 Z" fill="url(#crestGrad)" />
+              <path d="M48 4 C44 4 38 8 35 17 C42 13 58 13 65 17 C62 8 56 4 48 4 Z" fill="#86efac" opacity="0.35" />
+              <path d="M24 45 C24 23 35 17 50 17 C65 17 76 23 76 45 C76 58 73 70 71 80 C68 87 59 93 50 95 C41 93 32 87 29 80 C27 70 24 58 24 45 Z" fill="url(#bronzeGrad)" />
+              <path d="M26 43 C34 37 42 35 50 35 C58 35 66 37 74 43" stroke="#fef08a" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.5" />
+              <path d="M33 46 L67 46 L61 58 L54 58 L54 84 L46 84 L46 58 L39 58 Z" fill="#020617" />
+              <polygon points="50,35 53,35 52,61 48,61 47,35" fill="url(#bronzeGrad)" stroke="#78350f" stroke-width="0.5" />
+              <polygon points="36,51 44,48 44,53 37,54" fill="#00FF7F" filter="url(#eyeGlow)" />
+              <polygon points="64,51 56,48 56,53 63,54" fill="#00FF7F" filter="url(#eyeGlow)" />
+              <circle cx="40" cy="51" r="0.8" fill="#ffffff" />
+              <circle cx="60" cy="51" r="0.8" fill="#ffffff" />
+            </svg>
+          </div>
+          <div id="welcomeBubble" class="bubble talox">
+            Sincronizando con Supabase para cargar el catálogo de servicios, infraestructura n8n y clientes...
+          </div>
+        </div>
+      </div>
+
+      <!-- SEPARADOR ARRASTRABLE -->
+      <div id="resizer" class="resizer"></div>
+
+      <div id="chatInputBar" class="chat-input-bar">
+        <form id="chatForm" onsubmit="handleSend(event)" class="chat-form">
+          <textarea id="chatInput" placeholder="Escribe el requerimiento... (Enter = Enviar | Shift+Enter = Nueva línea)"></textarea>
+          <button id="btnSend" type="submit" class="btn-send">Enviar</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel-canvas">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Encuadre Metodológico</h3>
+            <span id="badgeEstado" class="insignia insignia-status">En Definición</span>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <span class="field-lbl">Cliente Oficial</span>
+              <div id="uiCliente" class="field-val">--</div>
+            </div>
+            <div>
+              <span class="field-lbl">Tipo de Servicio</span>
+              <div id="uiServicio" class="field-val">--</div>
+            </div>
+          </div>
+
+          <div id="uiAsanaRow" style="margin-bottom: 12px; display: none;">
+            <span class="field-lbl">Tarea Asana Vinculada</span>
+            <div id="uiAsanaLink" class="field-val" style="font-size: 12px; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">--</div>
+          </div>
+
+          <div>
+            <span class="field-lbl">Mandato Operativo (Disparador)</span>
+            <div id="uiMandato" class="field-block">
+              Esperando definiciones en el chat...
+            </div>
+          </div>
+
+          <div id="blockerBox" class="blocker-box">
+            <strong>Bloqueadores Metodológicos Pendientes:</strong>
+            <ul id="blockerList" style="margin-left: 16px;"></ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Plan de Tareas Agénticas</h3>
+            <span id="uiCount" class="insignia insignia-verde">0 tareas</span>
+          </div>
+
+          <div id="uiPipeline">
+            <div style="font-size: 13px; color: var(--xt-texto-muted); text-align: center; padding: 18px 0; font-style: italic;">
+              El plan de tareas se compondrá según el análisis del encargo.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <button id="btnAprobar" onclick="despacharPlan()" disabled class="btn-exec">
+          Aprobar y Despachar a n8n
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const TALOX_AVATAR_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bronzeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f59e0b" />
+          <stop offset="45%" stop-color="#d97706" />
+          <stop offset="85%" stop-color="#92400e" />
+          <stop offset="100%" stop-color="#78350f" />
+        </linearGradient>
+        <linearGradient id="crestGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00A551" />
+          <stop offset="50%" stop-color="#10b981" />
+          <stop offset="100%" stop-color="#008742" />
+        </linearGradient>
+        <filter id="eyeGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.2" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="#0b1120" />
+      <path d="M50 4 C40 4 33 11 31 22 C41 16 59 16 69 22 C67 11 60 4 50 4 Z" fill="url(#crestGrad)" />
+      <path d="M48 4 C44 4 38 8 35 17 C42 13 58 13 65 17 C62 8 56 4 48 4 Z" fill="#86efac" opacity="0.35" />
+      <path d="M24 45 C24 23 35 17 50 17 C65 17 76 23 76 45 C76 58 73 70 71 80 C68 87 59 93 50 95 C41 93 32 87 29 80 C27 70 24 58 24 45 Z" fill="url(#bronzeGrad)" />
+      <path d="M26 43 C34 37 42 35 50 35 C58 35 66 37 74 43" stroke="#fef08a" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.5" />
+      <path d="M33 46 L67 46 L61 58 L54 58 L54 84 L46 84 L46 58 L39 58 Z" fill="#020617" />
+      <polygon points="50,35 53,35 52,61 48,61 47,35" fill="url(#bronzeGrad)" stroke="#78350f" stroke-width="0.5" />
+      <polygon points="36,51 44,48 44,53 37,54" fill="#00FF7F" filter="url(#eyeGlow)" />
+      <polygon points="64,51 56,48 56,53 63,54" fill="#00FF7F" filter="url(#eyeGlow)" />
+      <circle cx="40" cy="51" r="0.8" fill="#ffffff" />
+      <circle cx="60" cy="51" r="0.8" fill="#ffffff" />
+    </svg>`;
+
+    let dbCatalogo = [];
+    let dbFlujos = [];
+    let dbDirectivas = [];
+    let dbClientes = [];
+
+    let conversationHistory = [];
+    let payload = {
+      solicitud_id: "",
+      task_gid: "",
+      asana_task_url: "",
+      cliente_oficial: "",
+      servicio_codigo: "",
+      mandato_operativo: {},
+      solicitante: {},
+      referencias: {},
+      estado_encuadre: "en_definicion",
+      bloqueadores: [],
+      plan_agente: []
+    };
+
+    // INIT
+    document.addEventListener("DOMContentLoaded", async () => {
+      updatePillStates();
+      await syncSupabase();
+      await initSession();
+      setupResizer();
+
+      const inputArea = document.getElementById('chatInput');
+      const formEl = document.getElementById('chatForm');
+
+      inputArea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          formEl.requestSubmit();
+        }
+      });
+    });
+
+    // DRAG RESIZER
+    function setupResizer() {
+      const resizer = document.getElementById('resizer');
+      const inputBar = document.getElementById('chatInputBar');
+      const panelChat = document.querySelector('.panel-chat');
+      let isResizing = false;
+
+      resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        resizer.classList.add('active');
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'ns-resize';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const panelRect = panelChat.getBoundingClientRect();
+        const offsetBottom = panelRect.bottom - e.clientY;
+        if (offsetBottom > 80 && offsetBottom < (panelRect.height * 0.7)) {
+          inputBar.style.height = `${offsetBottom}px`;
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          resizer.classList.remove('active');
+          document.body.style.userSelect = '';
+          document.body.style.cursor = '';
+        }
+      });
+    }
+
+    // MODAL Y PILLS
+    function updatePillStates() {
+      const url = localStorage.getItem("talox_sb_url");
+      const key = localStorage.getItem("talox_sb_key");
+      const hook = localStorage.getItem("talox_webhook_url");
+      
+      document.getElementById('pillSbUrl').innerHTML = (url ? '🟢' : '🔴') + ' Supabase URL';
+      document.getElementById('pillSbKey').innerHTML = (key ? '🟢' : '🔴') + ' Anon Key';
+      document.getElementById('pillWebhook').innerHTML = (hook ? '🟢' : '🔴') + ' n8n Webhook';
+    }
+
+    function openConfigModal() {
+      document.getElementById('sbUrl').value = localStorage.getItem("talox_sb_url") || '';
+      document.getElementById('sbKey').value = localStorage.getItem("talox_sb_key") || '';
+      document.getElementById('webhookInput').value = localStorage.getItem("talox_webhook_url") || 'https://inteligencia-xternum.app.n8n.cloud/webhook/talox-intake';
+      document.getElementById('configModal').style.display = 'flex';
+    }
+
+    function closeConfigModal() {
+      document.getElementById('configModal').style.display = 'none';
+    }
+
+    async function saveConfigModal() {
+      localStorage.setItem("talox_sb_url", document.getElementById('sbUrl').value.trim());
+      localStorage.setItem("talox_sb_key", document.getElementById('sbKey').value.trim());
+      localStorage.setItem("talox_webhook_url", document.getElementById('webhookInput').value.trim());
+      
+      closeConfigModal();
+      updatePillStates();
+      await syncSupabase();
+    }
+
+    function saveSessionState() {
+      localStorage.setItem("talox_session_history", JSON.stringify(conversationHistory));
+      localStorage.setItem("talox_session_payload", JSON.stringify(payload));
+    }
+
+    async function initSession() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const solicitudId = urlParams.get('solicitud_id');
+
+      if (solicitudId) {
+        const url = localStorage.getItem("talox_sb_url")?.replace(/\/$/, "");
+        const key = localStorage.getItem("talox_sb_key");
+
+        if (url && key) {
+          try {
+            const res = await fetch(`${url}/rest/v1/solicitudes_talox?solicitud_id=eq.${solicitudId}&select=*`, {
+              headers: {
+                "apikey": key,
+                "Authorization": `Bearer ${key}`
+              }
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.length > 0) {
+                const item = data[0];
+                const mo = item.mandato_operativo || {};
+
+                payload.solicitud_id = item.solicitud_id || solicitudId;
+                payload.task_gid = item.task_gid || "";
+                payload.asana_task_url = item.asana_task_url || "";
+                payload.cliente_oficial = item.cliente_oficial || mo.cliente_oficial || "";
+                payload.servicio_codigo = item.servicio_codigo || "";
+                payload.mandato_operativo = typeof mo === "string" ? { tarea_titulo: mo } : mo;
+                payload.solicitante = item.solicitante || {};
+                payload.referencias = item.referencias || {};
+                payload.estado_encuadre = "en_definicion";
+                payload.bloqueadores = [];
+                payload.plan_agente = [];
+
+                renderCanvas();
+
+                const nombreCliente = payload.cliente_oficial || "el cliente";
+                const nombreTarea = (typeof mo === "object" && mo.tarea_titulo) ? mo.tarea_titulo : "Tarea de Asana";
+                const saludo = `Hola Luis. Recibí el encargo desde Asana para **${nombreCliente}** sobre: **${nombreTarea}**.\n\nYa cargué la información base en el panel de encuadre. Revisemos el objetivo de negocio y el alcance metodológico para definir el plan de ejecución:`;
+
+                conversationHistory = [{ role: "assistant", content: saludo }];
+                saveSessionState();
+
+                const container = document.getElementById("chatHistory");
+                container.innerHTML = "";
+                const row = appendMessage(saludo, false);
+                enhanceCodeBlocks(row);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error("Error al precargar tarea desde Supabase:", err);
+          }
+        }
+      }
+
+      restoreSavedSession();
+    }
+
+    function restoreSavedSession() {
+      const savedHistory = localStorage.getItem("talox_session_history");
+      const savedPayload = localStorage.getItem("talox_session_payload");
+
+      if (savedPayload) {
+        try {
+          payload = JSON.parse(savedPayload);
+          renderCanvas();
+        } catch (e) {
+          console.warn("Fallo al restaurar canvas:", e);
+        }
+      }
+
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            conversationHistory = parsed;
+            const container = document.getElementById("chatHistory");
+            container.innerHTML = "";
+
+            conversationHistory.forEach(msg => {
+              if (msg.role === "user") {
+                appendMessage(msg.content, true);
+              } else if (msg.role === "assistant") {
+                const displayText = msg.content.replace(/<!--TALOX_STATE[\s\S]*?TALOX_STATE-->/, "").trim();
+                const row = appendMessage(displayText, false);
+                enhanceCodeBlocks(row);
+              }
+            });
+            container.scrollTop = container.scrollHeight;
+          }
+        } catch (e) {
+          console.warn("Fallo al restaurar historial:", e);
+        }
+      }
+    }
+
+    function nuevaSesion() {
+      if (conversationHistory.length > 0) {
+        const confirmar = confirm("¿Deseas iniciar una nueva sesión? Se limpiará el chat y el encuadre actual.");
+        if (!confirmar) return;
+      }
+
+      if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      conversationHistory = [];
+      payload = {
+        solicitud_id: "",
+        task_gid: "",
+        asana_task_url: "",
+        cliente_oficial: "",
+        servicio_codigo: "",
+        mandato_operativo: {},
+        solicitante: {},
+        referencias: {},
+        estado_encuadre: "en_definicion",
+        bloqueadores: [],
+        plan_agente: []
+      };
+
+      localStorage.removeItem("talox_session_history");
+      localStorage.removeItem("talox_session_payload");
+
+      const container = document.getElementById("chatHistory");
+      container.innerHTML = `
+        <div class="chat-row">
+          <div class="avatar-espartano">
+            ${TALOX_AVATAR_SVG}
+          </div>
+          <div id="welcomeBubble" class="bubble talox">
+            Hola Luis. Sesión reiniciada con conocimiento vivo de ${dbFlujos.length} flujos en n8n y ${dbCatalogo.length} servicios oficiales. Listo para encuadrar: ¿qué cliente y qué encargo tenemos hoy?
+          </div>
+        </div>
+      `;
+      renderCanvas();
+    }
+
+    async function syncSupabase() {
+      const url = localStorage.getItem("talox_sb_url")?.replace(/\/$/, "");
+      const key = localStorage.getItem("talox_sb_key");
+      const statusPill = document.getElementById("supabaseStatus");
+      const welcome = document.getElementById("welcomeBubble");
+
+      if (!url || !key) {
+        statusPill.className = "status-pill offline";
+        statusPill.innerText = "Configurar Conexión";
+        if (welcome && conversationHistory.length === 0) {
+          welcome.innerHTML = "Hola Luis. Ingresa la <strong>URL y la Anon Key</strong> de Supabase haciendo clic en los botones rojos superiores para sincronizar la infraestructura viva.";
+        }
+        return;
+      }
+
+      statusPill.className = "status-pill offline";
+      statusPill.innerText = "Sincronizando...";
+
+      try {
+        const headers = { "apikey": key, "Authorization": `Bearer ${key}` };
+
+        const resCat = await fetch(`${url}/rest/v1/catalogo_entregables?select=*`, { headers });
+        if (resCat.ok) dbCatalogo = await resCat.json();
+
+        const resFlujos = await fetch(`${url}/rest/v1/flujos_n8n_activos?select=*`, { headers });
+        if (resFlujos.ok) dbFlujos = await resFlujos.json();
+
+        try {
+          const resDir = await fetch(`${url}/rest/v1/directivas_socio?select=*`, { headers });
+          if (resDir.ok) dbDirectivas = await resDir.json();
+        } catch (_) {}
+
+        try {
+          const resCli = await fetch(`${url}/rest/v1/clientes_carpetas?select=*`, { headers });
+          if (resCli.ok) dbClientes = await resCli.json();
+        } catch (_) {}
+
+        statusPill.className = "status-pill online";
+        statusPill.innerText = `🟢 ${dbFlujos.length} flujos n8n · ${dbClientes.length} clientes · config TaloX · mejoras TaloX`;
+
+        if (welcome && conversationHistory.length === 0) {
+          welcome.innerHTML = `Hola Luis. Sistema operativo enlazado con <strong>${dbCatalogo.length} servicios de catálogo</strong> y <strong>${dbFlujos.length} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
+        }
+
+      } catch (err) {
+        statusPill.className = "status-pill offline";
+        statusPill.innerText = "Error de conexión";
+        if (welcome && conversationHistory.length === 0) {
+          welcome.innerHTML = `<span style="color:var(--xt-alerta)">⚠️ Error conectando a Supabase: ${err.message}. Verifica URL y Key.</span>`;
+        }
+      }
+    }
+
+    function buildSystemPrompt() {
+      const catalogoTexto = dbCatalogo.length > 0
+        ? dbCatalogo.map(c => `- CÓDIGO: "${c.codigo}" | NOMBRE: "${c.nombre}" | OBJETIVO: ${c.objetivo_concreto || c.descripcion_encuadre || ''}`).join("\n")
+        : `- (Catálogo no sincronizado)`;
+
+      const capacidadesTexto = dbFlujos.length > 0
+        ? dbFlujos.map(f => `- CAPACIDAD: "${f.capacidad_codigo}" (Rol: ${f.rol_arquitectura}) | NOMBRE: "${f.nombre}" | LO QUE RESUELVE SOLO: ${f.lo_que_resuelve_solo || f.descripcion_operativa || 'Ejecución técnica'}`).join("\n")
+        : `- drive_retrieval_docs: Ubica la carpeta _Docs en Google Drive.\n- hitl_insumos: Selección gráfica de insumos.\n- auditor_calidad: Bucle reflexivo evaluador-optimizador.`;
+
+      const clientesTexto = dbClientes.length > 0
+        ? dbClientes.map(cl => cl.cliente_oficial).filter(Boolean).join(", ")
+        : "CIFER, MEGALABS, DICA, SITIO, TATU, URUDATA, ERESUR";
+
+      const directivasTexto = dbDirectivas.length > 0
+        ? dbDirectivas.map(d => `- ${d.regla || d.directiva}`).join("\n")
+        : `- Cero complacencia ejecutiva.\n- Desambiguación antes de mover herramientas.`;
+
+      return `Eres TaloX, Engagement Partner y Director de Metodología de XTERNUM Consulting. 
+Tu contraparte es Luis Silva Domingo (CEO).
+
+CONVENCIONES DEL SISTEMA Y ARQUITECTURA (LO QUE RESUELVE EL BACKEND DETERMINISTA):
+1. BÚSQUEDA DOCUMENTAL AUTÓNOMA: El subflujo de retrieval ("drive_retrieval_docs") ubica por sí solo la carpeta madre del cliente y su subcarpeta "_Docs" en Google Drive usando la base de Supabase.
+2. NUNCA, BAJO NINGUNA CIRCUNSTANCIA, le preguntes al consultor:
+   - "¿Dónde está el archivo?"
+   - "¿En qué subcarpeta de Google Drive o Asana está?"
+   - "¿Cómo se llama el archivo exacto?"
+   El sistema lo busca autónomamente por convención y luego levanta la compuerta interactiva HITL 1 (Flujo 02) para que el consultor elija con un clic en pantalla los documentos a utilizar. Preguntar sobre la ubicación de archivos en Drive es una falta grave a tu rol.
+3. TUS PREGUNTAS SOLO DEBEN SER METODOLÓGICAS:
+   - Precisar el encuadre, objetivo de negocio o hipótesis a contrastar.
+   - Definir si se busca un espectro completo o priorizar un ángulo analítico específico (ej: financiero, operacional, estratégico).
+   - Máximo 1 o 2 preguntas por turno.
+4. TAREAS DE ASANA: Si el usuario te pasa un link de Asana, anótalo internamente como referencia sin cuestionar IDs técnicos.
+
+CLIENTES OFICIALES CONOCIDOS:
+${clientesTexto}
+
+CATÁLOGO OFICIAL DE SERVICIOS EN SUPABASE:
+${catalogoTexto}
+
+CAPACIDADES Y FLUJOS VIVOS DE N8N REGISTRADOS:
+${capacidadesTexto}
+
+DIRECTIVAS METODOLÓGICAS DEL SOCIO:
+${directivasTexto}
+
+REGLAS DE CLASIFICACIÓN:
+1. Si el encargo encaja en el catálogo (ej: debrief de entrevista, análisis de escenarios, perfiles de cargo), USA OBLIGATORIAMENTE ese código oficial.
+2. Si es una oportunidad de negocio, usa "desk_research_oportunidad". Si es un debrief de entrevista, usa "debrief_entrevista_oportunidades".
+3. Si el encargo es atípico, usa "sintetico_a_medida" y define una estructura ad-hoc.
+4. RIGOR DE COMPUERTA: Mientras existan dudas metodológicas o parámetros de alcance pendientes, "estado_encuadre" es "en_definicion". Solo pasa a "listo_para_ejecutar" cuando el cliente, el servicio y el alcance analítico estén acordados.
+5. META-ENCARGOS / AUTO-MEJORA (mejora_arquitectura):
+   - REGLA DE ACCESO: El especialista "arquitecto_talox" accede DIRECTAMENTE a Supabase para leer los flujos y el código fuente. NO requiere Google Drive, NO requiere carpeta _Docs, NO pasa por retrieval documental ni requiere insumos manuales.
+   - REGLA DE COMPUERTA: Para este servicio, PROHIBIDO generar bloqueadores sobre archivos en Drive o exportaciones.
+   - "cliente_oficial": "XTERNUM INTERNO"
+   - "servicio_codigo": "mejora_arquitectura"
+   - "mandato_operativo": Resumen técnico directo del requerimiento
+   - "estado_encuadre": "listo_para_ejecutar"
+   - "bloqueadores": []
+   - "plan_agente": [
+       {
+         "nombre": "Auditoría / Resolución Técnica",
+         "capacidad": "arquitecto_talox",
+         "tipo": "Especialista",
+         "parametros_completos": true,
+         "detalle": "Análisis autónomo desde base de datos Supabase"
+       }
+     ]
+
+OBLIGATORIO: En cada respuesta emite tu texto normal y al final este bloque exacto:
+<!--TALOX_STATE
+{
+  "cliente_oficial": "Nombre o --",
+  "servicio_codigo": "codigo_oficial_o_sintetico_o_en_definicion",
+  "mandato_operativo": "Resumen conciso del mandato",
+  "estado_encuadre": "en_definicion" o "listo_para_ejecutar",
+  "bloqueadores": ["duda metodológica 1", ...],
+  "plan_agente": [
+    { 
+      "nombre": "Nombre tarea", 
+      "capacidad": "codigo_capacidad_de_n8n", 
+      "tipo": "Retrieval/Especialista/Auditor/HITL", 
+      "parametros_completos": true o false,
+      "detalle": "Detalle técnico conciso" 
+    }
+  ]
+}
+TALOX_STATE-->`;
+    }
+
+    function renderCanvas() {
+      document.getElementById('uiCliente').innerText = payload.cliente_oficial || '--';
+      document.getElementById('uiServicio').innerText = payload.servicio_codigo || '--';
+      
+      let mandatoUI = 'Esperando definiciones en el chat...';
+      if (typeof payload.mandato_operativo === 'object' && payload.mandato_operativo !== null) {
+        const tit = payload.mandato_operativo.tarea_titulo || payload.mandato_operativo.cliente_oficial || '';
+        const desc = payload.mandato_operativo.tarea_descripcion && payload.mandato_operativo.tarea_descripcion !== 'Sin descripción' ? payload.mandato_operativo.tarea_descripcion : '';
+        const res = payload.mandato_operativo.resumen_analisis ? `\n\n*Nota TaloX:* ${payload.mandato_operativo.resumen_analisis}` : '';
+        mandatoUI = [tit, desc].filter(Boolean).join(" - ") + res;
+      } else if (payload.mandato_operativo) {
+        mandatoUI = payload.mandato_operativo;
+      }
+      document.getElementById('uiMandato').innerText = mandatoUI || 'Esperando definiciones en el chat...';
+
+      const asanaRow = document.getElementById('uiAsanaRow');
+      const asanaLink = document.getElementById('uiAsanaLink');
+      if (asanaRow && asanaLink) {
+        if (payload.asana_task_url) {
+          asanaRow.style.display = 'block';
+          asanaLink.innerHTML = `<a href="${payload.asana_task_url}" target="_blank" style="color: var(--xt-turquesa); text-decoration: none; font-weight: 700;">🔗 Ver tarea en Asana</a> <span style="color: var(--xt-texto-muted); font-size: 11px;">(GID: ${payload.task_gid || '--'})</span>`;
+        } else {
+          asanaRow.style.display = 'none';
+        }
+      }
+
+      const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
+      const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !== 'en_definicion' && payload.servicio_codigo !== '--';
+      const estaListoPorModelo = payload.estado_encuadre === 'listo_para_ejecutar';
+      const sinBloqueadores = !payload.bloqueadores || payload.bloqueadores.length === 0;
+      const tareasCompletas = payload.plan_agente && payload.plan_agente.length > 0 && payload.plan_agente.every(t => t.parametros_completos !== false);
+
+      const listoParaDespachar = tieneCliente && tieneServicioValido && estaListoPorModelo && sinBloqueadores && tareasCompletas;
+
+      const badge = document.getElementById('badgeEstado');
+      const btnAprobar = document.getElementById('btnAprobar');
+      const blockerBox = document.getElementById('blockerBox');
+      const blockerList = document.getElementById('blockerList');
+
+      if (listoParaDespachar) {
+        badge.className = "insignia insignia-ready";
+        badge.innerText = "Listo para Ejecutar";
+        btnAprobar.disabled = false;
+        blockerBox.style.display = "none";
+      } else {
+        badge.className = "insignia insignia-status";
+        badge.innerText = "En Definición";
+        btnAprobar.disabled = true;
+
+        if (payload.bloqueadores && payload.bloqueadores.length > 0) {
+          blockerList.innerHTML = payload.bloqueadores.map(b => `<li>${b}</li>`).join('');
+          blockerBox.style.display = "block";
+        } else {
+          blockerBox.style.display = "none";
+        }
+      }
+
+      const divPipe = document.getElementById('uiPipeline');
+      if (payload.plan_agente && payload.plan_agente.length > 0) {
+        divPipe.innerHTML = payload.plan_agente.map((t, idx) => `
+          <div class="task-row">
+            <div>
+              <strong style="font-size: 13px; color: var(--xt-texto); display: block;">${idx + 1}. ${t.nombre}</strong>
+              <span style="font-size: 11.5px; color: var(--xt-texto-muted);">${t.detalle || ''}</span>
+            </div>
+            <span class="insignia insignia-verde">${t.tipo || 'Agente'}</span>
+          </div>
+        `).join('');
+        document.getElementById('uiCount').innerText = `${payload.plan_agente.length} tareas`;
+      } else {
+        divPipe.innerHTML = `<div style="font-size: 13px; color: var(--xt-texto-muted); text-align: center; padding: 18px 0; font-style: italic;">El plan de tareas se compondrá según el análisis del encargo.</div>`;
+        document.getElementById('uiCount').innerText = "0 tareas";
+      }
+    }
+
+    function appendMessage(text, isUser) {
+      const container = document.getElementById('chatHistory');
+      const row = document.createElement('div');
+      row.className = `chat-row ${isUser ? 'user' : ''}`;
+      
+      if (isUser) {
+        row.innerHTML = `<div class="bubble user">${text}</div>`;
+      } else {
+        row.innerHTML = `
+          <div class="avatar-espartano">
+            ${TALOX_AVATAR_SVG}
+          </div>
+          <div class="bubble talox">${marked.parse(text)}</div>
+        `;
+      }
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+      return row;
+    }
+
+    function enhanceCodeBlocks(container) {
+      const blocks = container.querySelectorAll('pre');
+      blocks.forEach((pre) => {
+        if (pre.querySelector('.code-toolbar')) return;
+
+        const codeElement = pre.querySelector('code');
+        const textContent = codeElement ? codeElement.innerText : pre.innerText;
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'code-toolbar';
+
+        const btnCopy = document.createElement('button');
+        btnCopy.className = 'code-btn';
+        btnCopy.innerText = '📋 Copiar';
+        btnCopy.onclick = () => {
+          navigator.clipboard.writeText(textContent);
+          btnCopy.innerText = '✅ Copiado';
+          setTimeout(() => btnCopy.innerText = '📋 Copiar', 2000);
+        };
+
+        const btnDownload = document.createElement('button');
+        btnDownload.className = 'code-btn';
+        btnDownload.innerText = '💾 Descargar .json';
+        btnDownload.onclick = () => {
+          const blob = new Blob([textContent], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `talox_export_${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        };
+
+        toolbar.appendChild(btnCopy);
+        toolbar.appendChild(btnDownload);
+        pre.appendChild(toolbar);
+      });
+    }
+
+    async function llamarEdgeFunction(messages) {
+      const url = localStorage.getItem("talox_sb_url")?.replace(/\/$/, "");
+      const key = localStorage.getItem("talox_sb_key");
+
+      if (!url || !key) {
+        throw new Error("Falta configurar Supabase URL o Anon Key en la barra superior. Haz clic en las píldoras rojas.");
+      }
+
+      const systemPrompt = buildSystemPrompt();
+
+      let sanitizedMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+      while (sanitizedMessages.length > 0 && sanitizedMessages[0].role === 'assistant') {
+        sanitizedMessages.shift();
+      }
+
+      if (sanitizedMessages.length === 0) {
+        throw new Error("No hay mensajes de usuario para enviar.");
+      }
+
+      const res = await fetch(`${url}/functions/v1/talox-chat`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${key}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: sanitizedMessages,
+          system: systemPrompt
+        })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`HTTP ${res.status} - ${errorText}`);
+      }
+
+      const data = await res.json();
+      return { text: data.text || data.content?.[0]?.text || data.respuesta_arquitecto || "" };
+    }
+
+    async function handleSend(e) {
+      if (e) e.preventDefault();
+
+      const input = document.getElementById('chatInput');
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      const asanaMatch = userText.match(/app\.asana\.com[\\\/]+0[\\\/]+(?:[^"\\/\s<>]+[\\\/]+)+(\d{10,20})/);
+      if (asanaMatch) {
+        payload.task_gid = asanaMatch[1];
+        payload.asana_task_url = asanaMatch[0].startsWith('http') ? asanaMatch[0] : `https://${asanaMatch[0]}`;
+        renderCanvas();
+      }
+
+      appendMessage(userText, true);
+      input.value = '';
+
+      conversationHistory.push({ role: "user", content: userText });
+      saveSessionState();
+
+      const btnSend = document.getElementById('btnSend');
+      btnSend.disabled = true;
+      btnSend.innerText = "...";
+
+      const assistantRow = appendMessage("Pensando...", false);
+      const bubble = assistantRow.querySelector('.bubble.talox');
+
+      try {
+        const result = await llamarEdgeFunction(conversationHistory);
+        const fullReply = result.text;
+
+        const stateMatch = fullReply.match(/<!--TALOX_STATE([\s\S]*?)TALOX_STATE-->/);
+        let displayText = fullReply;
+
+        if (stateMatch) {
+          displayText = fullReply.replace(/<!--TALOX_STATE[\s\S]*?TALOX_STATE-->/, "").trim();
+          try {
+            const parsedState = JSON.parse(stateMatch[1].trim());
+            if (parsedState.mandato_operativo && typeof payload.mandato_operativo === 'object') {
+              payload.mandato_operativo.resumen_analisis = parsedState.mandato_operativo;
+              delete parsedState.mandato_operativo;
+            }
+            payload = { ...payload, ...parsedState };
+            renderCanvas();
+          } catch (err) {
+            console.warn("Error parseando estado:", err);
+          }
+        }
+
+        bubble.innerHTML = marked.parse(displayText);
+        enhanceCodeBlocks(bubble);
+        
+        conversationHistory.push({ role: "assistant", content: fullReply });
+        saveSessionState();
+
+      } catch (err) {
+        bubble.innerHTML = `<span style="color:var(--xt-alerta)">⚠️ Error: ${err.message}</span>`;
+      } finally {
+        btnSend.disabled = false;
+        btnSend.innerText = "Enviar";
+        document.getElementById('chatHistory').scrollTop = document.getElementById('chatHistory').scrollHeight;
+      }
+    }
+
+    async function despacharPlan() {
+      const url = localStorage.getItem("talox_webhook_url") || '';
+      const btn = document.getElementById('btnAprobar');
+      
+      if (!url) {
+        alert("Falta configurar el Webhook de n8n en la barra superior.");
+        return;
+      }
+      
+      btn.innerText = "Ejecutando en n8n...";
+      btn.disabled = true;
+
+      const rowEspera = appendMessage("Consultando al Arquitecto Jefe en n8n...", false);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        rowEspera.remove();
+
+        if (data.respuesta_arquitecto) {
+          const rowRespuesta = appendMessage(data.respuesta_arquitecto, false);
+          enhanceCodeBlocks(rowRespuesta);
+          
+          conversationHistory.push({ role: "assistant", content: data.respuesta_arquitecto });
+          saveSessionState();
+        } else {
+          appendMessage("✅ Encargo procesado correctamente por el orquestador.", false);
+        }
+
+      } catch (err) {
+        rowEspera.remove();
+        appendMessage(`⚠️ Error de conexión con n8n: ${err.message}`, false);
+      } finally {
+        btn.innerText = "Aprobar y Despachar a n8n";
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
