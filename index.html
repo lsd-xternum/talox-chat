@@ -834,7 +834,7 @@
 
                 const nombreCliente = payload.cliente_oficial || "el cliente";
                 const nombreTarea = (typeof mo === "object" && mo.tarea_titulo) ? mo.tarea_titulo : "Tarea de Asana";
-                const saludo = `Hola Luis. Recibí el encargo desde Asana para **${nombreCliente}** sobre: **${nombreTarea}**.\n\nYa cargué la información base en el panel de encuadre. Revisemos el objetivo de negocio y el alcance metodológico para definir el plan de ejecución:`;
+                const saludo = `Hola! Recibí el encargo desde Asana para **${nombreCliente}** sobre: **${nombreTarea}**.\n\nYa cargué la información base en el panel de encuadre. Revisemos el objetivo de negocio y el alcance metodológico para definir el plan de ejecución:`;
 
                 conversationHistory = [{ role: "assistant", content: saludo }];
                 saveSessionState();
@@ -928,7 +928,7 @@
             ${TALOX_AVATAR_SVG}
           </div>
           <div id="welcomeBubble" class="bubble talox">
-            Hola Luis. Sesión reiniciada con conocimiento vivo de ${dbFlujos.length} flujos en n8n y ${dbCatalogo.length} servicios oficiales. Listo para encuadrar: ¿qué cliente y qué encargo tenemos hoy?
+            Hola! Sesión reiniciada con conocimiento vivo de ${dbFlujos.length} flujos en n8n y ${dbCatalogo.length} servicios oficiales. Listo para encuadrar: ¿qué cliente y qué encargo tenemos hoy?
           </div>
         </div>
       `;
@@ -945,7 +945,7 @@
         statusPill.className = "status-pill offline";
         statusPill.innerText = "Configurar Conexión";
         if (welcome && conversationHistory.length === 0) {
-          welcome.innerHTML = "Hola Luis. Ingresa la <strong>URL y la Anon Key</strong> de Supabase haciendo clic en los botones rojos superiores para sincronizar la infraestructura viva.";
+          welcome.innerHTML = "Hola. Ingresa la <strong>URL y la Anon Key</strong> de Supabase haciendo clic en los botones rojos superiores para sincronizar la infraestructura viva.";
         }
         return;
       }
@@ -976,7 +976,7 @@
         statusPill.innerText = `🟢 ${dbFlujos.length} flujos n8n · ${dbClientes.length} clientes · config TaloX · mejoras TaloX`;
 
         if (welcome && conversationHistory.length === 0) {
-          welcome.innerHTML = `Hola Luis. Sistema operativo enlazado con <strong>${dbCatalogo.length} servicios de catálogo</strong> y <strong>${dbFlujos.length} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
+          welcome.innerHTML = `Hola. Sistema operativo enlazado con <strong>${dbCatalogo.length} servicios de catálogo</strong> y <strong>${dbFlujos.length} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
         }
 
       } catch (err) {
@@ -1006,7 +1006,7 @@
         : `- Cero complacencia ejecutiva.\n- Desambiguación antes de mover herramientas.`;
 
       return `Eres TaloX, Engagement Partner y Director de Metodología de XTERNUM Consulting. 
-Tu contraparte es Luis Silva Domingo (CEO).
+Tu contraparte es el equipo de consultoría de XTERNUM Consulting.
 
 CONVENCIONES DEL SISTEMA Y ARQUITECTURA (LO QUE RESUELVE EL BACKEND DETERMINISTA):
 1. BÚSQUEDA DOCUMENTAL AUTÓNOMA: El subflujo de retrieval ("drive_retrieval_docs") ubica por sí solo la carpeta madre del cliente y su subcarpeta "_Docs" en Google Drive usando la base de Supabase.
