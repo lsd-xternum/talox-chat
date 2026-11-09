@@ -1282,8 +1282,17 @@ TALOX_STATE-->`;
         }
       }
 
-      const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
-      const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !== 'en_definicion' && payload.servicio_codigo !== '--';
+      // Si es encargo al arquitecto o mejora interna, auto-asigna cliente y servicio si vinieron vacíos
+const esEncargoInterno = payload.servicio_codigo === 'mejora_arquitectura' || 
+  (payload.plan_agente && payload.plan_agente.some(t => t.capacidad === 'arquitecto_talox' || (t.nombre && t.nombre.toLowerCase().includes('arquitecto'))));
+
+if (esEncargoInterno) {
+  if (!payload.cliente_oficial || payload.cliente_oficial === '--') payload.cliente_oficial = 'XTERNUM INTERNO';
+  if (!payload.servicio_codigo || payload.servicio_codigo === '--' || payload.servicio_codigo === 'en_definicion') payload.servicio_codigo = 'mejora_arquitectura';
+}
+
+const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
+const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !== 'en_definicion' && payload.servicio_codigo !== '--';
       const estaListoPorModelo = payload.estado_encuadre === 'listo_para_ejecutar';
       const sinBloqueadores = !payload.bloqueadores || payload.bloqueadores.length === 0;
       const tareasCompletas = payload.plan_agente && payload.plan_agente.length > 0 && payload.plan_agente.every(t => t.parametros_completos !== false);
