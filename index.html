@@ -1506,11 +1506,11 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
     }
 
     async function despacharPlan() {
-      const url = getWebhookUrl();
+      const url = localStorage.getItem("talox_webhook_url") || '';
       const btn = document.getElementById('btnAprobar');
       
       if (!url) {
-        alert("Falta configurar el Webhook de n8n.");
+        alert("Falta configurar el Webhook de n8n en la barra superior.");
         return;
       }
       
@@ -1551,6 +1551,7 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
         btn.disabled = false;
       }
     }
+    
   </script>
 </body>
 </html>
