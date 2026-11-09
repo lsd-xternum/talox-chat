@@ -1475,18 +1475,34 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
         const stateMatch = fullReply.match(/<!--TALOX_STATE([\s\S]*?)TALOX_STATE-->/);
         let displayText = fullReply;
 
-        if (stateMatch) {
+       if (stateMatch) {
           displayText = fullReply.replace(/<!--TALOX_STATE[\s\S]*?TALOX_STATE-->/, "").trim();
           try {
             const parsedState = JSON.parse(stateMatch[1].trim());
-            if (parsedState.mandato_operativo && typeof payload.mandato_operativo === 'object') {
-              payload.mandato_operativo.resumen_analisis = parsedState.mandato_operativo;
-              delete parsedState.mandato_operativo;
+            
+            // 1. Respetar el contrato: el cliente y servicio van a la raíz
+            if (parsedState.cliente_oficial) payload.cliente_oficial = parsedState.cliente_oficial;
+            if (parsedState.servicio_codigo) payload.servicio_codigo = parsedState.servicio_codigo;
+            if (parsedState.estado_encuadre) payload.estado_encuadre = parsedState.estado_encuadre;
+            if (parsedState.bloqueadores) payload.bloqueadores = parsedState.bloqueadores;
+            if (parsedState.plan_agente) payload.plan_agente = parsedState.plan_agente;
+
+            // 2. Respetar el contrato: Todo el contexto textual va DENTRO de mandato_operativo
+            if (!payload.mandato_operativo) payload.mandato_operativo = {};
+            
+            // El título será un resumen corto del cliente y servicio
+            payload.mandato_operativo.tarea_titulo = `Encargo para ${payload.cliente_oficial || 'Cliente'}`;
+            
+            // El cuerpo metodológico que redactó la IA va a tarea_descripcion
+            if (parsedState.mandato_operativo) {
+               payload.mandato_operativo.tarea_descripcion = typeof parsedState.mandato_operativo === 'string' 
+                 ? parsedState.mandato_operativo 
+                 : parsedState.mandato_operativo.resumen_analisis;
             }
-            payload = { ...payload, ...parsedState };
+
             renderCanvas();
           } catch (err) {
-            console.warn("Error parseando estado:", err);
+            console.warn("Error parseando estado agéntico:", err);
           }
         }
 
