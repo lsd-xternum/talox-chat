@@ -1506,18 +1506,22 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
     }
 
     async function despacharPlan() {
-      const url = localStorage.getItem("talox_webhook_url") || '';
+      const url = getWebhookUrl();
       const btn = document.getElementById('btnAprobar');
       
       if (!url) {
-        alert("Falta configurar el Webhook de n8n en la barra superior.");
+        alert("Falta configurar el Webhook de n8n.");
         return;
+      }
+
+      if (!payload.solicitud_id) {
+        payload.solicitud_id = 'req_' + Date.now();
       }
       
       btn.innerText = "Ejecutando en n8n...";
       btn.disabled = true;
 
-      const rowEspera = appendMessage("Consultando al Arquitecto Jefe en n8n...", false);
+      const rowEspera = appendMessage("Iniciando ejecución y búsqueda de insumos en Google Drive...", false);
 
       try {
         const response = await fetch(url, {
@@ -1531,25 +1535,86 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
         }
 
         const data = await response.json();
-        rowEspera.remove();
 
-        if (data.respuesta_arquitecto) {
+        if (data && data.respuesta_arquitecto) {
+          rowEspera.remove();
           const rowRespuesta = appendMessage(data.respuesta_arquitecto, false);
           enhanceCodeBlocks(rowRespuesta);
-          
           conversationHistory.push({ role: "assistant", content: data.respuesta_arquitecto });
           saveSessionState();
-        } else {
-          appendMessage("✅ Encargo procesado correctamente por el orquestador.", false);
+          btn.innerText = "Aprobar y Despachar a n8n";
+          btn.disabled = false;
+          return;
         }
+
+        monitorearHitl1(payload.solicitud_id, rowEspera, btn);
 
       } catch (err) {
         rowEspera.remove();
         appendMessage(`⚠️ Error de conexión con n8n: ${err.message}`, false);
-      } finally {
         btn.innerText = "Aprobar y Despachar a n8n";
         btn.disabled = false;
       }
+    }
+
+    function monitorearHitl1(solicitudId, rowEspera, btn) {
+      const sbUrl = getSbUrl();
+      const sbKey = getSbKey();
+      let intentos = 0;
+      const maxIntentos = 45;
+
+      const timer = setInterval(async () => {
+        intentos++;
+        try {
+          const res = await fetch(`${sbUrl}/rest/v1/solicitudes_talox?solicitud_id=eq.${solicitudId}&select=estado,hitl1_url`, {
+            headers: {
+              "apikey": sbKey,
+              "Authorization": `Bearer ${sbKey}`
+            }
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const item = data[0];
+
+              if (item.hitl1_url) {
+                clearInterval(timer);
+                rowEspera.remove();
+
+                const mensajeHitl = `🎯 **Insumos identificados en Google Drive.**\n\nRevisa y selecciona los documentos para activar la redacción técnica:\n\n👉 <a href="${item.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
+
+                appendMessage(mensajeHitl, false);
+                conversationHistory.push({ role: "assistant", content: mensajeHitl });
+                saveSessionState();
+
+                btn.innerText = "Aprobar y Despachar a n8n";
+                btn.disabled = false;
+                return;
+              }
+
+              if (item.estado === 'cancelado') {
+                clearInterval(timer);
+                rowEspera.remove();
+                appendMessage("⚠️ El encargo fue cancelado.", false);
+                btn.innerText = "Aprobar y Despachar a n8n";
+                btn.disabled = false;
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Sondeo Supabase:", e);
+        }
+
+        if (intentos >= maxIntentos) {
+          clearInterval(timer);
+          rowEspera.remove();
+          appendMessage("⚠️ Se agotó el tiempo esperando la pantalla de insumos.", false);
+          btn.innerText = "Aprobar y Despachar a n8n";
+          btn.disabled = false;
+        }
+      }, 2000);
     }
     
   </script>
