@@ -8,6 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- SDK oficial de Supabase para Auth -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
@@ -45,7 +48,6 @@
       font-weight: 700;
     }
 
-    /* HEADER AJUSTADO PARA BLANCO PURO */
     header {
       background: var(--xt-blanco);
       border-bottom: 2px solid var(--xt-borde);
@@ -100,7 +102,7 @@
       transition: background .15s;
     }
     .btn-reset:hover {
-      background: rgba(255,255,255,0.2);
+      background: #f1f5f9;
     }
 
     .config-bar {
@@ -109,23 +111,65 @@
       gap: 10px;
     }
 
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--xt-fondo);
+      border: 1px solid var(--xt-borde);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+    }
+    .user-avatar-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--xt-verde);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      overflow: hidden;
+    }
+    .user-avatar-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .btn-logout {
+      background: transparent;
+      border: none;
+      color: var(--xt-texto-muted);
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: underline;
+      font-family: 'Montserrat', sans-serif;
+      margin-left: 4px;
+    }
+    .btn-logout:hover {
+      color: var(--xt-alerta);
+    }
+
     .config-pill {
       background: transparent;
       border: 1px solid var(--xt-borde);
       color: var(--xt-texto-muted);
-      padding: 6px 12px;
+      padding: 6px 10px;
       border-radius: 20px;
       font-family: 'Montserrat', sans-serif;
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       transition: background 0.15s;
     }
     .config-pill:hover {
-      background: rgba(255,255,255,0.2);
+      background: #f1f5f9;
     }
 
     .status-pill {
@@ -147,6 +191,49 @@
       border: 1px solid #fca5a5;
     }
 
+    /* OVERLAY LOGIN GOOGLE */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(5px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    .auth-card {
+      background: var(--xt-blanco);
+      border-radius: 12px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .btn-google {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: #ffffff;
+      color: #1f2937;
+      border: 1px solid #d1d5db;
+      padding: 12px 18px;
+      border-radius: 6px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      margin-top: 24px;
+    }
+    .btn-google:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+
     /* MODAL DE CONFIGURACIÓN */
     .modal-overlay {
       position: fixed;
@@ -161,7 +248,7 @@
       background: var(--xt-blanco);
       padding: 24px;
       border-radius: 8px;
-      width: 320px;
+      width: 340px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       display: flex;
       flex-direction: column;
@@ -403,24 +490,24 @@
       margin-bottom: 4px;
     }
     .field-val {
-  background: #f8fafc; /* Gris muy sutil, casi blanco */
-  border: 1px solid var(--xt-borde);
-  border-radius: 5px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--xt-texto);
-}
-   .field-block {
-  background: #f8fafc; 
-  border: 1px solid var(--xt-borde);
-  border-radius: 5px;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.5;
-  min-height: 50px;
-  color: var(--xt-texto);
-}
+      background: #f8fafc;
+      border: 1px solid var(--xt-borde);
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--xt-texto);
+    }
+    .field-block {
+      background: #f8fafc;
+      border: 1px solid var(--xt-borde);
+      border-radius: 5px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 50px;
+      color: var(--xt-texto);
+    }
 
     .insignia {
       display: inline-block;
@@ -502,10 +589,31 @@
 </head>
 <body>
 
-  <!-- MODAL DE CONFIGURACIÓN -->
+  <!-- MODAL DE LOGIN CORPORATIVO (GOOGLE OAUTH) -->
+  <div id="authOverlay" class="auth-overlay" style="display: none;">
+    <div class="auth-card">
+      <img src="https://cdn.prod.website-files.com/62dc95d6b127ce2124d096e6/62dc9688d0fe361d899b4dd5_Logo-p-500.png" alt="Xternum" style="height: 32px; margin: 0 auto 16px auto; display: block;">
+      <h2 style="font-size: 18px; color: var(--xt-texto); margin-bottom: 8px;">TaloX Engagement Partner</h2>
+      <p style="font-size: 13px; color: var(--xt-texto-muted); line-height: 1.5;">
+        Acceso exclusivo para el equipo de consultoría de XTERNUM. Inicia sesión con tu cuenta corporativa de Google para continuar:
+      </p>
+
+      <button onclick="loginConGoogle()" class="btn-google">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+          <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
+          <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+          <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+        </svg>
+        Entrar con Google
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIGURACIÓN AVANZADA -->
   <div id="configModal" class="modal-overlay">
     <div class="modal-content">
-      <h3>Configuración TaloX</h3>
+      <h3>Configuración de Infraestructura</h3>
       
       <label>Supabase URL</label>
       <input type="text" id="sbUrl" placeholder="https://xyz.supabase.co">
@@ -531,11 +639,19 @@
     </div>
 
     <div class="config-bar">
-      <span id="supabaseStatus" class="status-pill offline">Supabase: Conectando...</span>
+      <span id="supabaseStatus" class="status-pill online">Supabase: Sincronizando...</span>
       
-      <button onclick="openConfigModal()" class="config-pill" id="pillSbUrl">🔴 Supabase URL</button>
-      <button onclick="openConfigModal()" class="config-pill" id="pillSbKey">🔴 Anon Key</button>
-      <button onclick="openConfigModal()" class="config-pill" id="pillWebhook">🔴 n8n Webhook</button>
+      <!-- PERFIL DE USUARIO LOGUEADO -->
+      <div id="userProfileBar" class="user-profile" style="display: none;">
+        <div id="userAvatarContainer" class="user-avatar-circle">U</div>
+        <span id="userNameDisplay" style="font-weight: 700; color: var(--xt-texto);">Consultor</span>
+        <button onclick="logout()" class="btn-logout" title="Cerrar Sesión">Salir</button>
+      </div>
+
+      <!-- BOTÓN OPCIONAL PARA AJUSTES TÉCNICOS -->
+      <button onclick="openConfigModal()" class="config-pill" title="Ajustes técnicos de conexión">
+        ⚙️ Config
+      </button>
       
       <button onclick="nuevaSesion()" class="btn-reset" title="Iniciar un nuevo encuadre en blanco">
         ↺ Nueva Sesión
@@ -656,6 +772,24 @@
   </main>
 
   <script>
+    // VALORES BASE DE INFRAESTRUCTURA (ZERO-CONFIG PARA EL EQUIPO)
+    const DEFAULT_SB_URL = "https://afukapkxnllsqbrmjbig.supabase.co";
+    const DEFAULT_SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmdWthcGt4bmxsc3Ficm1qYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3MTgxMzgsImV4cCI6MjEwODI5NDEzOH0.mZFeA5KmWxcB-Y6jpV_w49l51vvvOLLrJLH_ynS7trY";
+    const DEFAULT_WEBHOOK_URL = "https://inteligencia-xternum.app.n8n.cloud/webhook/talox-intake";
+
+    function getSbUrl() {
+      return (localStorage.getItem("talox_sb_url") || DEFAULT_SB_URL).replace(/\/$/, "");
+    }
+    function getSbKey() {
+      return localStorage.getItem("talox_sb_key") || DEFAULT_SB_KEY;
+    }
+    function getWebhookUrl() {
+      return localStorage.getItem("talox_webhook_url") || DEFAULT_WEBHOOK_URL;
+    }
+
+    // Inicializar cliente Supabase JS
+    const supabaseClient = window.supabase.createClient(getSbUrl(), getSbKey());
+
     const TALOX_AVATAR_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="bronzeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -691,6 +825,7 @@
     let dbFlujos = [];
     let dbDirectivas = [];
     let dbClientes = [];
+    let currentUserSession = null;
 
     let conversationHistory = [];
     let payload = {
@@ -707,9 +842,9 @@
       plan_agente: []
     };
 
-    // INIT
+    // INICIALIZACIÓN
     document.addEventListener("DOMContentLoaded", async () => {
-      updatePillStates();
+      await initAuth();
       await syncSupabase();
       await initSession();
       setupResizer();
@@ -724,6 +859,69 @@
         }
       });
     });
+
+    // SISTEMA DE AUTENTICACIÓN GOOGLE
+    async function initAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      handleSession(session);
+
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        handleSession(session);
+      });
+    }
+
+    function handleSession(session) {
+      currentUserSession = session;
+      const overlay = document.getElementById('authOverlay');
+      const profileBar = document.getElementById('userProfileBar');
+      const nameDisplay = document.getElementById('userNameDisplay');
+      const avatarContainer = document.getElementById('userAvatarContainer');
+
+      if (!session) {
+        overlay.style.display = 'flex';
+        profileBar.style.display = 'none';
+        return;
+      }
+
+      overlay.style.display = 'none';
+      profileBar.style.display = 'flex';
+
+      const user = session.user;
+      const nombre = user.user_metadata?.full_name || user.email.split('@')[0];
+      const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
+      nameDisplay.innerText = nombre;
+      if (avatarUrl) {
+        avatarContainer.innerHTML = `<img src="${avatarUrl}" alt="${nombre}">`;
+      } else {
+        avatarContainer.innerText = nombre.charAt(0).toUpperCase();
+      }
+
+      // Guardar identidad del consultor en el payload agéntico
+      payload.solicitante = {
+        nombre: nombre,
+        email: user.email,
+        auth_id: user.id
+      };
+    }
+
+    async function loginConGoogle() {
+      const redirectUri = window.location.origin + window.location.pathname;
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUri
+        }
+      });
+      if (error) {
+        alert("Error al conectar con Google: " + error.message);
+      }
+    }
+
+    async function logout() {
+      await supabaseClient.auth.signOut();
+      window.location.reload();
+    }
 
     // DRAG RESIZER
     function setupResizer() {
@@ -758,21 +956,11 @@
       });
     }
 
-    // MODAL Y PILLS
-    function updatePillStates() {
-      const url = localStorage.getItem("talox_sb_url");
-      const key = localStorage.getItem("talox_sb_key");
-      const hook = localStorage.getItem("talox_webhook_url");
-      
-      document.getElementById('pillSbUrl').innerHTML = (url ? '🟢' : '🔴') + ' Supabase URL';
-      document.getElementById('pillSbKey').innerHTML = (key ? '🟢' : '🔴') + ' Anon Key';
-      document.getElementById('pillWebhook').innerHTML = (hook ? '🟢' : '🔴') + ' n8n Webhook';
-    }
-
+    // MODAL DE CONFIGURACIÓN
     function openConfigModal() {
-      document.getElementById('sbUrl').value = localStorage.getItem("talox_sb_url") || '';
-      document.getElementById('sbKey').value = localStorage.getItem("talox_sb_key") || '';
-      document.getElementById('webhookInput').value = localStorage.getItem("talox_webhook_url") || 'https://inteligencia-xternum.app.n8n.cloud/webhook/talox-intake';
+      document.getElementById('sbUrl').value = localStorage.getItem("talox_sb_url") || DEFAULT_SB_URL;
+      document.getElementById('sbKey').value = localStorage.getItem("talox_sb_key") || DEFAULT_SB_KEY;
+      document.getElementById('webhookInput').value = localStorage.getItem("talox_webhook_url") || DEFAULT_WEBHOOK_URL;
       document.getElementById('configModal').style.display = 'flex';
     }
 
@@ -786,7 +974,6 @@
       localStorage.setItem("talox_webhook_url", document.getElementById('webhookInput').value.trim());
       
       closeConfigModal();
-      updatePillStates();
       await syncSupabase();
     }
 
@@ -800,8 +987,8 @@
       const solicitudId = urlParams.get('solicitud_id');
 
       if (solicitudId) {
-        const url = localStorage.getItem("talox_sb_url")?.replace(/\/$/, "");
-        const key = localStorage.getItem("talox_sb_key");
+        const url = getSbUrl();
+        const key = getSbKey();
 
         if (url && key) {
           try {
@@ -824,7 +1011,7 @@
                 payload.cliente_oficial = item.cliente_oficial || mo.cliente_oficial || "";
                 payload.servicio_codigo = item.servicio_codigo || "";
                 payload.mandato_operativo = typeof mo === "string" ? { tarea_titulo: mo } : mo;
-                payload.solicitante = item.solicitante || {};
+                payload.solicitante = item.solicitante || payload.solicitante || {};
                 payload.referencias = item.referencias || {};
                 payload.estado_encuadre = "en_definicion";
                 payload.bloqueadores = [];
@@ -861,7 +1048,8 @@
 
       if (savedPayload) {
         try {
-          payload = JSON.parse(savedPayload);
+          const parsedPayload = JSON.parse(savedPayload);
+          payload = { ...payload, ...parsedPayload };
           renderCanvas();
         } catch (e) {
           console.warn("Fallo al restaurar canvas:", e);
@@ -911,7 +1099,7 @@
         cliente_oficial: "",
         servicio_codigo: "",
         mandato_operativo: {},
-        solicitante: {},
+        solicitante: payload.solicitante || {},
         referencias: {},
         estado_encuadre: "en_definicion",
         bloqueadores: [],
@@ -936,19 +1124,10 @@
     }
 
     async function syncSupabase() {
-      const url = localStorage.getItem("talox_sb_url")?.replace(/\/$/, "");
-      const key = localStorage.getItem("talox_sb_key");
+      const url = getSbUrl();
+      const key = getSbKey();
       const statusPill = document.getElementById("supabaseStatus");
       const welcome = document.getElementById("welcomeBubble");
-
-      if (!url || !key) {
-        statusPill.className = "status-pill offline";
-        statusPill.innerText = "Configurar Conexión";
-        if (welcome && conversationHistory.length === 0) {
-          welcome.innerHTML = "Hola. Ingresa la <strong>URL y la Anon Key</strong> de Supabase haciendo clic en los botones rojos superiores para sincronizar la infraestructura viva.";
-        }
-        return;
-      }
 
       statusPill.className = "status-pill offline";
       statusPill.innerText = "Sincronizando...";
@@ -973,7 +1152,7 @@
         } catch (_) {}
 
         statusPill.className = "status-pill online";
-        statusPill.innerText = `🟢 ${dbFlujos.length} flujos n8n · ${dbClientes.length} clientes · config TaloX · mejoras TaloX`;
+        statusPill.innerText = `🟢 ${dbFlujos.length} flujos n8n · ${dbClientes.length} clientes · TaloX Activo`;
 
         if (welcome && conversationHistory.length === 0) {
           welcome.innerHTML = `Hola. Sistema operativo enlazado con <strong>${dbCatalogo.length} servicios de catálogo</strong> y <strong>${dbFlujos.length} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
@@ -983,7 +1162,7 @@
         statusPill.className = "status-pill offline";
         statusPill.innerText = "Error de conexión";
         if (welcome && conversationHistory.length === 0) {
-          welcome.innerHTML = `<span style="color:var(--xt-alerta)">⚠️ Error conectando a Supabase: ${err.message}. Verifica URL y Key.</span>`;
+          welcome.innerHTML = `<span style="color:var(--xt-alerta)">⚠️ Error conectando a Supabase: ${err.message}.</span>`;
         }
       }
     }
@@ -1097,7 +1276,7 @@ TALOX_STATE-->`;
       if (asanaRow && asanaLink) {
         if (payload.asana_task_url) {
           asanaRow.style.display = 'block';
-          asanaLink.innerHTML = `<a href="${payload.asana_task_url}" target="_blank" style="color: var(--xt-turquesa); text-decoration: none; font-weight: 700;">🔗 Ver tarea en Asana</a> <span style="color: var(--xt-texto-muted); font-size: 11px;">(GID: ${payload.task_gid || '--'})</span>`;
+          asanaLink.innerHTML = `<a href="${payload.asana_task_url}" target="_blank" style="color: var(--xt-verde); text-decoration: none; font-weight: 700;">🔗 Ver tarea en Asana</a> <span style="color: var(--xt-texto-muted); font-size: 11px;">(GID: ${payload.task_gid || '--'})</span>`;
         } else {
           asanaRow.style.display = 'none';
         }
@@ -1214,12 +1393,8 @@ TALOX_STATE-->`;
     }
 
     async function llamarEdgeFunction(messages) {
-      const url = localStorage.getItem("talox_sb_url")?.replace(/\/$/, "");
-      const key = localStorage.getItem("talox_sb_key");
-
-      if (!url || !key) {
-        throw new Error("Falta configurar Supabase URL o Anon Key en la barra superior. Haz clic en las píldoras rojas.");
-      }
+      const url = getSbUrl();
+      const key = getSbKey();
 
       const systemPrompt = buildSystemPrompt();
 
@@ -1232,10 +1407,14 @@ TALOX_STATE-->`;
         throw new Error("No hay mensajes de usuario para enviar.");
       }
 
+      // Enviar Bearer token del usuario logueado (o anon key si es pública)
+      const authToken = currentUserSession ? currentUserSession.access_token : key;
+
       const res = await fetch(`${url}/functions/v1/talox-chat`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${key}`,
+          "apikey": key,
+          "Authorization": `Bearer ${authToken}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -1318,11 +1497,11 @@ TALOX_STATE-->`;
     }
 
     async function despacharPlan() {
-      const url = localStorage.getItem("talox_webhook_url") || '';
+      const url = getWebhookUrl();
       const btn = document.getElementById('btnAprobar');
       
       if (!url) {
-        alert("Falta configurar el Webhook de n8n en la barra superior.");
+        alert("Falta configurar el Webhook de n8n.");
         return;
       }
       
