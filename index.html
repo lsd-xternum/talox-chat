@@ -1146,10 +1146,21 @@
           if (resDir.ok) dbDirectivas = await resDir.json();
         } catch (_) {}
 
-        try {
+       try {
           const resCli = await fetch(`${url}/rest/v1/clientes_carpetas?select=*`, { headers });
-          if (resCli.ok) dbClientes = await resCli.json();
-        } catch (_) {}
+          if (!resCli.ok) {
+            throw new Error(`HTTP ${resCli.status} al leer clientes_carpetas`);
+          }
+          dbClientes = await resCli.json();
+          if (!Array.isArray(dbClientes) || dbClientes.length === 0) {
+            console.warn("ADVERTENCIA: La tabla clientes_carpetas retornó 0 registros.");
+          }
+        } catch (errCli) {
+          console.error("Error sincronizando clientes:", errCli);
+          statusPill.className = "status-pill offline";
+          statusPill.innerText = "⚠️ Error: clientes_carpetas inaccesible";
+          dbClientes = [];
+        }
 
         statusPill.className = "status-pill online";
         statusPill.innerText = `🟢 ${dbFlujos.length} flujos n8n · ${dbClientes.length} clientes · TaloX Activo`;
@@ -1176,9 +1187,16 @@
         ? dbFlujos.map(f => `- CAPACIDAD: "${f.capacidad_codigo}" (Rol: ${f.rol_arquitectura}) | NOMBRE: "${f.nombre}" | LO QUE RESUELVE SOLO: ${f.lo_que_resuelve_solo || f.descripcion_operativa || 'Ejecución técnica'}`).join("\n")
         : `- drive_retrieval_docs: Ubica la carpeta _Docs en Google Drive.\n- hitl_insumos: Selección gráfica de insumos.\n- auditor_calidad: Bucle reflexivo evaluador-optimizador.`;
 
-      const clientesTexto = dbClientes.length > 0
-        ? dbClientes.map(cl => cl.cliente_oficial).filter(Boolean).join(", ")
-        : "CIFER, MEGALABS, DICA, SITIO, TATU, URUDATA, ERESUR";
+     // Extraer nombres únicos basados estrictamente en la columna oficial 'cliente_nombre'
+      const clientesUnicos = [...new Set(
+        dbClientes
+          .map(cl => cl.cliente_nombre)
+          .filter(Boolean)
+      )];
+
+      const clientesTexto = clientesUnicos.length > 0
+        ? clientesUnicos.join(", ")
+        : "ALERTA CRÍTICA: 0 clientes sincronizados desde Supabase. Informa al consultor que no es posible validar clientes oficiales hasta que se resuelva la conexión con la base de datos.";
 
       const directivasTexto = dbDirectivas.length > 0
         ? dbDirectivas.map(d => `- ${d.regla || d.directiva}`).join("\n")
