@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
-  <!-- SDK oficial de Supabase para Auth -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -191,7 +190,6 @@
       border: 1px solid #fca5a5;
     }
 
-    /* OVERLAY LOGIN GOOGLE */
     .auth-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -234,7 +232,6 @@
       border-color: #9ca3af;
     }
 
-    /* MODAL DE CONFIGURACIÓN */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -287,7 +284,6 @@
       gap: 16px;
     }
 
-    /* SEPARADOR ARRASTRABLE */
     .resizer {
       height: 6px;
       background: var(--xt-borde);
@@ -334,13 +330,6 @@
       display: block;
     }
 
-    .bubble {
-      max-width: 84%;
-      padding: 13px 17px;
-      border-radius: 10px;
-      font-size: 13.5px;
-      line-height: 1.5;
-    }
     .bubble.talox {
       background: var(--xt-fondo);
       border: 1px solid var(--xt-borde);
@@ -585,11 +574,109 @@
       cursor: not-allowed;
       opacity: 0.7;
     }
+
+    /* TIPOGRAFÍA Y TABLAS DENTRO DEL CHAT */
+    .bubble {
+      max-width: 88%;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.55;
+      font-family: 'Lato', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .bubble h1, .bubble h2, .bubble h3, .bubble h4 {
+      font-family: 'Montserrat', sans-serif;
+      color: var(--xt-texto);
+      letter-spacing: -0.2px;
+    }
+    .bubble h1 {
+      font-size: 14.5px;
+      font-weight: 700;
+      margin: 16px 0 8px 0;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--xt-borde);
+    }
+    .bubble h2 {
+      font-size: 13.5px;
+      font-weight: 700;
+      margin: 14px 0 6px 0;
+    }
+    .bubble h3 {
+      font-size: 12.5px;
+      font-weight: 700;
+      margin: 12px 0 4px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .bubble h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--xt-texto-muted);
+      margin: 10px 0 4px 0;
+    }
+    .bubble p {
+      margin-bottom: 10px;
+    }
+    .bubble p:last-child {
+      margin-bottom: 0;
+    }
+    .bubble ul, .bubble ol {
+      margin: 6px 0 10px 20px;
+    }
+    .bubble li {
+      margin-bottom: 4px;
+    }
+
+    .bubble table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 12px;
+      line-height: 1.45;
+      background: var(--xt-blanco);
+      border: 1px solid var(--xt-borde);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .bubble th {
+      background: #f8fafc;
+      color: var(--xt-texto);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 12px;
+      border: 1px solid var(--xt-borde);
+      text-align: left;
+    }
+    .bubble td {
+      padding: 8px 12px;
+      border: 1px solid var(--xt-borde);
+      color: var(--xt-texto);
+      vertical-align: top;
+    }
+    .bubble tr:nth-child(even) td {
+      background: #fafbf9;
+    }
+    .bubble tr:hover td {
+      background: #f1f5f9;
+    }
+
+    .bubble code:not(pre code) {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
 
-  <!-- MODAL DE LOGIN CORPORATIVO (GOOGLE OAUTH) -->
   <div id="authOverlay" class="auth-overlay" style="display: none;">
     <div class="auth-card">
       <img src="https://cdn.prod.website-files.com/62dc95d6b127ce2124d096e6/62dc9688d0fe361d899b4dd5_Logo-p-500.png" alt="Xternum" style="height: 32px; margin: 0 auto 16px auto; display: block;">
@@ -610,20 +697,15 @@
     </div>
   </div>
 
-  <!-- MODAL DE CONFIGURACIÓN AVANZADA -->
   <div id="configModal" class="modal-overlay">
     <div class="modal-content">
       <h3>Configuración de Infraestructura</h3>
-      
       <label>Supabase URL</label>
       <input type="text" id="sbUrl" placeholder="https://xyz.supabase.co">
-      
       <label>Anon Key</label>
       <input type="password" id="sbKey" placeholder="ey...">
-      
       <label>Webhook n8n</label>
       <input type="text" id="webhookInput" placeholder="https://...">
-      
       <div class="modal-actions">
         <button onclick="closeConfigModal()" class="btn-cancel">Cancelar</button>
         <button onclick="saveConfigModal()" class="btn-send">Guardar</button>
@@ -641,14 +723,12 @@
     <div class="config-bar">
       <span id="supabaseStatus" class="status-pill online">Supabase: Sincronizando...</span>
       
-      <!-- PERFIL DE USUARIO LOGUEADO -->
       <div id="userProfileBar" class="user-profile" style="display: none;">
         <div id="userAvatarContainer" class="user-avatar-circle">U</div>
         <span id="userNameDisplay" style="font-weight: 700; color: var(--xt-texto);">Consultor</span>
         <button onclick="logout()" class="btn-logout" title="Cerrar Sesión">Salir</button>
       </div>
 
-      <!-- BOTÓN OPCIONAL PARA AJUSTES TÉCNICOS -->
       <button onclick="openConfigModal()" class="config-pill" title="Ajustes técnicos de conexión">
         ⚙️ Config
       </button>
@@ -701,7 +781,6 @@
         </div>
       </div>
 
-      <!-- SEPARADOR ARRASTRABLE -->
       <div id="resizer" class="resizer"></div>
 
       <div id="chatInputBar" class="chat-input-bar">
@@ -772,22 +851,14 @@
   </main>
 
   <script>
-    // VALORES BASE DE INFRAESTRUCTURA (ZERO-CONFIG PARA EL EQUIPO)
     const DEFAULT_SB_URL = "https://afukapkxnllsqbrmjbig.supabase.co";
     const DEFAULT_SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmdWthcGt4bmxsc3Ficm1qYmlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3MTgxMzgsImV4cCI6MjEwODI5NDEzOH0.mZFeA5KmWxcB-Y6jpV_w49l51vvvOLLrJLH_ynS7trY";
     const DEFAULT_WEBHOOK_URL = "https://inteligencia-xternum.app.n8n.cloud/webhook/talox-intake";
 
-    function getSbUrl() {
-      return (localStorage.getItem("talox_sb_url") || DEFAULT_SB_URL).replace(/\/$/, "");
-    }
-    function getSbKey() {
-      return localStorage.getItem("talox_sb_key") || DEFAULT_SB_KEY;
-    }
-    function getWebhookUrl() {
-      return localStorage.getItem("talox_webhook_url") || DEFAULT_WEBHOOK_URL;
-    }
+    function getSbUrl() { return (localStorage.getItem("talox_sb_url") || DEFAULT_SB_URL).replace(/\/$/, ""); }
+    function getSbKey() { return localStorage.getItem("talox_sb_key") || DEFAULT_SB_KEY; }
+    function getWebhookUrl() { return localStorage.getItem("talox_webhook_url") || DEFAULT_WEBHOOK_URL; }
 
-    // Inicializar cliente Supabase JS
     const supabaseClient = window.supabase.createClient(getSbUrl(), getSbKey());
 
     const TALOX_AVATAR_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -842,7 +913,6 @@
       plan_agente: []
     };
 
-    // INICIALIZACIÓN
     document.addEventListener("DOMContentLoaded", async () => {
       await initAuth();
       await syncSupabase();
@@ -860,11 +930,9 @@
       });
     });
 
-    // SISTEMA DE AUTENTICACIÓN GOOGLE
     async function initAuth() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       handleSession(session);
-
       supabaseClient.auth.onAuthStateChange((_event, session) => {
         handleSession(session);
       });
@@ -897,7 +965,6 @@
         avatarContainer.innerText = nombre.charAt(0).toUpperCase();
       }
 
-      // Guardar identidad del consultor en el payload agéntico
       payload.solicitante = {
         nombre: nombre,
         email: user.email,
@@ -909,13 +976,9 @@
       const redirectUri = window.location.origin + window.location.pathname;
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: redirectUri
-        }
+        options: { redirectTo: redirectUri }
       });
-      if (error) {
-        alert("Error al conectar con Google: " + error.message);
-      }
+      if (error) alert("Error al conectar con Google: " + error.message);
     }
 
     async function logout() {
@@ -923,7 +986,6 @@
       window.location.reload();
     }
 
-    // DRAG RESIZER
     function setupResizer() {
       const resizer = document.getElementById('resizer');
       const inputBar = document.getElementById('chatInputBar');
@@ -956,7 +1018,6 @@
       });
     }
 
-    // MODAL DE CONFIGURACIÓN
     function openConfigModal() {
       document.getElementById('sbUrl').value = localStorage.getItem("talox_sb_url") || DEFAULT_SB_URL;
       document.getElementById('sbKey').value = localStorage.getItem("talox_sb_key") || DEFAULT_SB_KEY;
@@ -972,7 +1033,6 @@
       localStorage.setItem("talox_sb_url", document.getElementById('sbUrl').value.trim());
       localStorage.setItem("talox_sb_key", document.getElementById('sbKey').value.trim());
       localStorage.setItem("talox_webhook_url", document.getElementById('webhookInput').value.trim());
-      
       closeConfigModal();
       await syncSupabase();
     }
@@ -993,10 +1053,7 @@
         if (url && key) {
           try {
             const res = await fetch(`${url}/rest/v1/solicitudes_talox?solicitud_id=eq.${solicitudId}&select=*`, {
-              headers: {
-                "apikey": key,
-                "Authorization": `Bearer ${key}`
-              }
+              headers: { "apikey": key, "Authorization": `Bearer ${key}` }
             });
 
             if (res.ok) {
@@ -1034,11 +1091,10 @@
               }
             }
           } catch (err) {
-            console.error("Error al precargar tarea desde Supabase:", err);
+            console.error("Error al precargar tarea:", err);
           }
         }
       }
-
       restoreSavedSession();
     }
 
@@ -1051,9 +1107,7 @@
           const parsedPayload = JSON.parse(savedPayload);
           payload = { ...payload, ...parsedPayload };
           renderCanvas();
-        } catch (e) {
-          console.warn("Fallo al restaurar canvas:", e);
-        }
+        } catch (e) { console.warn("Fallo al restaurar canvas:", e); }
       }
 
       if (savedHistory) {
@@ -1075,9 +1129,7 @@
             });
             container.scrollTop = container.scrollHeight;
           }
-        } catch (e) {
-          console.warn("Fallo al restaurar historial:", e);
-        }
+        } catch (e) { console.warn("Fallo al restaurar historial:", e); }
       }
     }
 
@@ -1086,24 +1138,13 @@
         const confirmar = confirm("¿Deseas iniciar una nueva sesión? Se limpiará el chat y el encuadre actual.");
         if (!confirmar) return;
       }
-
-      if (window.location.search) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+      if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
 
       conversationHistory = [];
       payload = {
-        solicitud_id: "",
-        task_gid: "",
-        asana_task_url: "",
-        cliente_oficial: "",
-        servicio_codigo: "",
-        mandato_operativo: {},
-        solicitante: payload.solicitante || {},
-        referencias: {},
-        estado_encuadre: "en_definicion",
-        bloqueadores: [],
-        plan_agente: []
+        solicitud_id: "", task_gid: "", asana_task_url: "", cliente_oficial: "", servicio_codigo: "",
+        mandato_operativo: {}, solicitante: payload.solicitante || {}, referencias: {},
+        estado_encuadre: "en_definicion", bloqueadores: [], plan_agente: []
       };
 
       localStorage.removeItem("talox_session_history");
@@ -1134,7 +1175,6 @@
 
       try {
         const headers = { "apikey": key, "Authorization": `Bearer ${key}` };
-
         const resCat = await fetch(`${url}/rest/v1/catalogo_entregables?select=*`, { headers });
         if (resCat.ok) dbCatalogo = await resCat.json();
 
@@ -1142,33 +1182,27 @@
         if (resFlujos.ok) dbFlujos = await resFlujos.json();
 
         try {
-          const resDir = await fetch(`${url}/rest/v1/directivas_socio?select=*`, { headers });
+          const resDir = await fetch(`${url}/rest/v1/estandares_calidad?select=*`, { headers });
           if (resDir.ok) dbDirectivas = await resDir.json();
         } catch (_) {}
 
-       try {
+        try {
           const resCli = await fetch(`${url}/rest/v1/clientes_carpetas?select=*`, { headers });
-          if (!resCli.ok) {
-            throw new Error(`HTTP ${resCli.status} al leer clientes_carpetas`);
-          }
+          if (!resCli.ok) throw new Error(`HTTP ${resCli.status} al leer clientes_carpetas`);
           dbClientes = await resCli.json();
-          if (!Array.isArray(dbClientes) || dbClientes.length === 0) {
-            console.warn("ADVERTENCIA: La tabla clientes_carpetas retornó 0 registros.");
-          }
         } catch (errCli) {
           console.error("Error sincronizando clientes:", errCli);
-          statusPill.className = "status-pill offline";
-          statusPill.innerText = "⚠️ Error: clientes_carpetas inaccesible";
           dbClientes = [];
         }
 
         statusPill.className = "status-pill online";
-        statusPill.innerText = `🟢 ${dbFlujos.length} flujos n8n · ${dbClientes.length} clientes · TaloX Activo`;
+        const totalServ = dbCatalogo.length || 0;
+        const totalEst = dbDirectivas.length || 0;
+        statusPill.innerHTML = `🟢 ${dbFlujos.length} flujos &middot; ${totalServ} servicios &middot; ${totalEst} estándares &middot; ${dbClientes.length} clientes &middot; En línea`;
 
         if (welcome && conversationHistory.length === 0) {
-          welcome.innerHTML = `Hola. Sistema operativo enlazado con <strong>${dbCatalogo.length} servicios de catálogo</strong> y <strong>${dbFlujos.length} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
+          welcome.innerHTML = `Hola. Sistema operativo enlazado con <strong>${totalServ} servicios de catálogo</strong> y <strong>${dbFlujos.length} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
         }
-
       } catch (err) {
         statusPill.className = "status-pill offline";
         statusPill.innerText = "Error de conexión";
@@ -1204,17 +1238,17 @@
         }
       }
 
-      // Si es encargo al arquitecto o mejora interna, auto-asigna cliente y servicio si vinieron vacíos
-const esEncargoInterno = payload.servicio_codigo === 'mejora_arquitectura' || 
-  (payload.plan_agente && payload.plan_agente.some(t => t.capacidad === 'arquitecto_talox' || (t.nombre && t.nombre.toLowerCase().includes('arquitecto'))));
+      const esEncargoInterno = payload.servicio_codigo === 'mejora_arquitectura' || 
+        payload.servicio_codigo === 'sintetico_a_medida' ||
+        (payload.plan_agente && payload.plan_agente.some(t => t.capacidad === 'arquitecto_talox' || (t.nombre && t.nombre.toLowerCase().includes('arquitecto'))));
 
-if (esEncargoInterno) {
-  if (!payload.cliente_oficial || payload.cliente_oficial === '--') payload.cliente_oficial = 'XTERNUM INTERNO';
-  if (!payload.servicio_codigo || payload.servicio_codigo === '--' || payload.servicio_codigo === 'en_definicion') payload.servicio_codigo = 'mejora_arquitectura';
-}
+      if (esEncargoInterno) {
+        if (!payload.cliente_oficial || payload.cliente_oficial === '--') payload.cliente_oficial = 'XTERNUM INTERNO';
+        if (!payload.servicio_codigo || payload.servicio_codigo === '--' || payload.servicio_codigo === 'en_definicion') payload.servicio_codigo = 'sintetico_a_medida';
+      }
 
-const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
-const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !== 'en_definicion' && payload.servicio_codigo !== '--';
+      const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
+      const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !== 'en_definicion' && payload.servicio_codigo !== '--';
       const estaListoPorModelo = payload.estado_encuadre === 'listo_para_ejecutar';
       const sinBloqueadores = !payload.bloqueadores || payload.bloqueadores.length === 0;
       const tareasCompletas = payload.plan_agente && payload.plan_agente.length > 0 && payload.plan_agente.every(t => t.parametros_completos !== false);
@@ -1235,7 +1269,6 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
         badge.className = "insignia insignia-status";
         badge.innerText = "En Definición";
         btnAprobar.disabled = true;
-
         if (payload.bloqueadores && payload.bloqueadores.length > 0) {
           blockerList.innerHTML = payload.bloqueadores.map(b => `<li>${b}</li>`).join('');
           blockerBox.style.display = "block";
@@ -1270,11 +1303,12 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
       if (isUser) {
         row.innerHTML = `<div class="bubble user">${text}</div>`;
       } else {
+        const textoLimpio = typeof text === 'string' ? text.replace(/\\n/g, '\n') : text;
         row.innerHTML = `
           <div class="avatar-espartano">
             ${TALOX_AVATAR_SVG}
           </div>
-          <div class="bubble talox">${marked.parse(text)}</div>
+          <div class="bubble talox">${marked.parse(textoLimpio)}</div>
         `;
       }
       container.appendChild(row);
@@ -1327,18 +1361,12 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
       const url = getSbUrl();
       const key = getSbKey();
 
-
-      
       let sanitizedMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
       while (sanitizedMessages.length > 0 && sanitizedMessages[0].role === 'assistant') {
         sanitizedMessages.shift();
       }
+      if (sanitizedMessages.length === 0) throw new Error("No hay mensajes de usuario para enviar.");
 
-      if (sanitizedMessages.length === 0) {
-        throw new Error("No hay mensajes de usuario para enviar.");
-      }
-
-      // Enviar Bearer token del usuario logueado (o anon key si es pública)
       const authToken = currentUserSession ? currentUserSession.access_token : key;
 
       const res = await fetch(`${url}/functions/v1/talox-chat`, {
@@ -1348,10 +1376,7 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
           "Authorization": `Bearer ${authToken}`,
           "Content-Type": "application/json"
         },
-       body: JSON.stringify({
-          messages: sanitizedMessages
-        })
-        
+        body: JSON.stringify({ messages: sanitizedMessages })
       });
 
       if (!res.ok) {
@@ -1397,40 +1422,33 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
         const stateMatch = fullReply.match(/<!--TALOX_STATE([\s\S]*?)TALOX_STATE-->/);
         let displayText = fullReply;
 
-       if (stateMatch) {
+        if (stateMatch) {
           displayText = fullReply.replace(/<!--TALOX_STATE[\s\S]*?TALOX_STATE-->/, "").trim();
           try {
             const parsedState = JSON.parse(stateMatch[1].trim());
             
-            // 1. Respetar el contrato: el cliente y servicio van a la raíz
-           if (parsedState.cliente_oficial) payload.cliente_oficial = parsedState.cliente_oficial;
-
+            if (parsedState.cliente_oficial) payload.cliente_oficial = parsedState.cliente_oficial;
             if (parsedState.servicio_codigo) payload.servicio_codigo = parsedState.servicio_codigo;
-            
             if (parsedState.estado_encuadre) payload.estado_encuadre = parsedState.estado_encuadre;
             if (parsedState.bloqueadores) payload.bloqueadores = parsedState.bloqueadores;
             if (parsedState.plan_agente) payload.plan_agente = parsedState.plan_agente;
 
-            // 2. Respetar el contrato: Todo el contexto textual va DENTRO de mandato_operativo
             if (!payload.mandato_operativo) payload.mandato_operativo = {};
-            
-            // El título será un resumen corto del cliente y servicio
             payload.mandato_operativo.tarea_titulo = `Encargo para ${payload.cliente_oficial || 'Cliente'}`;
             
-            // El cuerpo metodológico que redactó la IA va a tarea_descripcion
             if (parsedState.mandato_operativo) {
                payload.mandato_operativo.tarea_descripcion = typeof parsedState.mandato_operativo === 'string' 
                  ? parsedState.mandato_operativo 
                  : parsedState.mandato_operativo.resumen_analisis;
             }
-
             renderCanvas();
           } catch (err) {
             console.warn("Error parseando estado agéntico:", err);
           }
         }
 
-        bubble.innerHTML = marked.parse(displayText);
+        const textoLimpio = typeof displayText === 'string' ? displayText.replace(/\\n/g, '\n') : displayText;
+        bubble.innerHTML = marked.parse(textoLimpio);
         enhanceCodeBlocks(bubble);
         
         conversationHistory.push({ role: "assistant", content: fullReply });
@@ -1445,7 +1463,7 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
       }
     }
 
-        async function despacharPlan() {
+    async function despacharPlan() {
       const url = getWebhookUrl();
       const btn = document.getElementById('btnAprobar');
       
@@ -1470,16 +1488,16 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
           body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
 
-        // 1. Caso Síncrono (Arquitecto / Meta-encargos)
         const entregable = data?.borrador || data?.respuesta_arquitecto;
         if (entregable) {
-          const rowRespuesta = appendMessage(entregable, false);
+          let textoEntregable = entregable;
+          if (typeof textoEntregable === 'object') textoEntregable = JSON.stringify(textoEntregable, null, 2);
+          
+          const rowRespuesta = appendMessage(textoEntregable, false);
           enhanceCodeBlocks(rowRespuesta);
           conversationHistory.push({ 
             role: "assistant", 
@@ -1491,21 +1509,14 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
           return;
         }
 
-        // 2. Caso Asíncrono (Pipelines Largos con HITL)
-        // Se notifica al consultor y se libera la UI de inmediato
         appendMessage(
-          `🚀 **Encargo despachado a n8n** (ID: \`${reqId}\`).
-
-El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo plano. Podés seguir usando este chat libremente; te avisaré por acá en cuanto la compuerta de insumos esté disponible.`,
+          `🚀 **Encargo despachado a n8n** (ID: \`${reqId}\`).\n\nEl pipeline agéntico para **${clienteActual}** está ejecutándose en segundo plano. Podés seguir usando este chat libremente; te avisaré por acá en cuanto la compuerta de insumos esté disponible.`,
           false
         );
         saveSessionState();
-
-        // Reactivar el botón para futuros encargos
         btn.innerText = "Aprobar y Despachar a n8n";
         btn.disabled = false;
 
-        // Iniciar escucha reactiva en segundo plano
         activarEscuchaEnSegundoPlano(reqId, clienteActual);
 
       } catch (err) {
@@ -1515,15 +1526,17 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       }
     }
 
+    // Registro de eventos para evitar duplicación entre Realtime y Polling
+    const eventosProcesados = new Set();
+
     function activarEscuchaEnSegundoPlano(solicitudId, clienteNombre) {
-      // Registrar tarea activa en localStorage para persistencia
       let activas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
       if (!activas.find(t => t.id === solicitudId)) {
         activas.push({ id: solicitudId, cliente: clienteNombre, inicio: Date.now() });
         localStorage.setItem("talox_tareas_activas", JSON.stringify(activas));
       }
 
-      // Escucha vía Supabase Realtime (WebSockets nativos)
+      let intervalId = null;
       const canal = supabaseClient
         .channel(`seguimiento_${solicitudId}`)
         .on(
@@ -1535,13 +1548,13 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
             filter: `solicitud_id=eq.${solicitudId}`
           },
           (payloadUpdate) => {
+            if (intervalId) clearInterval(intervalId); // Cancela el polling
             procesarActualizacionSolicitud(payloadUpdate.new, canal);
           }
         )
         .subscribe();
 
-      // Polling de respaldo en background cada 5s (sin timeout destructivo)
-      const intervalId = setInterval(async () => {
+      intervalId = setInterval(async () => {
         try {
           const { data, error } = await supabaseClient
             .from('solicitudes_talox')
@@ -1559,48 +1572,44 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       }, 5000);
     }
 
-  function procesarActualizacionSolicitud(registro, canal) {
+    function procesarActualizacionSolicitud(registro, canal) {
       if (!registro) return;
 
-      // 1. Llegada de la compuerta HITL 1
+      const claveEvento = `${registro.solicitud_id}_${registro.estado}_${registro.hitl1_url ? 'hitl' : 'final'}`;
+      if (eventosProcesados.has(claveEvento)) return;
+      eventosProcesados.add(claveEvento);
+
       if (registro.hitl1_url) {
         if (canal) supabaseClient.removeChannel(canal);
         removerDeTareasActivas(registro.solicitud_id);
-
-        const mensajeHitl = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.
-
-Revisa y selecciona los documentos para activar la redacción técnica:
-
-👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
-        
+        const mensajeHitl = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.\n\nRevisa y selecciona los documentos para activar la redacción técnica:\n\n👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
         appendMessage(mensajeHitl, false);
         conversationHistory.push({ role: "assistant", content: mensajeHitl });
         saveSessionState();
         return;
       }
 
-      // 2. Encargo cancelado downstream
-      if (registro.estado === 'cancelado') {
-        if (canal) supabaseClient.removeChannel(canal);
-        removerDeTareasActivas(registro.solicitud_id);
-        appendMessage(`⚠️ El encargo \`${registro.solicitud_id}\` fue cancelado en n8n.`, false);
-        saveSessionState();
-        return;
-      }
-
-      // 3. Encargo de Arquitectura finalizado en segundo plano
       if (registro.estado === 'finalizado_con_exito' && registro.borrador_especialista) {
         if (canal) supabaseClient.removeChannel(canal);
         removerDeTareasActivas(registro.solicitud_id);
         
         let entregable = registro.borrador_especialista.borrador || registro.borrador_especialista.respuesta_arquitecto || registro.borrador_especialista;
-        if (typeof entregable === 'object') entregable = JSON.stringify(entregable, null, 2);
+        if (typeof entregable === 'object') {
+            entregable = JSON.stringify(entregable, null, 2);
+        }
 
         const rowRespuesta = appendMessage(entregable, false);
         enhanceCodeBlocks(rowRespuesta);
-        conversationHistory.push({ role: "assistant", content: "✅ Encargo completado por el arquitecto y entregado en pantalla." });
+        conversationHistory.push({ role: "assistant", content: "✅ Encargo completado por el especialista/arquitecto y entregado en pantalla." });
         saveSessionState();
         return;
+      }
+
+      if (registro.estado === 'cancelado') {
+        if (canal) supabaseClient.removeChannel(canal);
+        removerDeTareasActivas(registro.solicitud_id);
+        appendMessage(`⚠️ El encargo \`${registro.solicitud_id}\` fue cancelado en n8n.`, false);
+        saveSessionState();
       }
     }
 
@@ -1609,6 +1618,6 @@ Revisa y selecciona los documentos para activar la redacción técnica:
       activas = activas.filter(t => t.id !== solicitudId);
       localStorage.setItem("talox_tareas_activas", JSON.stringify(activas));
     }
-    </script>
+  </script>
 </body>
 </html>
