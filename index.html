@@ -1570,16 +1570,19 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
 
         const data = await response.json();
 
-        if (data && data.respuesta_arquitecto) {
-          rowEspera.remove();
-          const rowRespuesta = appendMessage(data.respuesta_arquitecto, false);
-          enhanceCodeBlocks(rowRespuesta);
-          conversationHistory.push({ role: "assistant", content: data.respuesta_arquitecto });
-          saveSessionState();
-          btn.innerText = "Aprobar y Despachar a n8n";
-          btn.disabled = false;
-          return;
-        }
+      // CÓDIGO CORREGIDO (CONTRATO UNIVERSAL):
+const entregable = data?.borrador || data?.respuesta_arquitecto;
+
+if (entregable) {
+  rowEspera.remove();
+  const rowRespuesta = appendMessage(entregable, false);
+  enhanceCodeBlocks(rowRespuesta);
+  conversationHistory.push({ role: "assistant", content: entregable });
+  saveSessionState();
+  btn.innerText = "Aprobar y Despachar a n8n";
+  btn.disabled = false;
+  return;
+}
 
         monitorearHitl1(payload.solicitud_id, rowEspera, btn);
 
