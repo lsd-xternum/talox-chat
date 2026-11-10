@@ -1579,7 +1579,10 @@ if (entregable) {
   rowEspera.remove();
   const rowRespuesta = appendMessage(entregable, false);
   enhanceCodeBlocks(rowRespuesta);
-  conversationHistory.push({ role: "assistant", content: entregable });
+  conversationHistory.push({ 
+  role: "assistant", 
+  content: "✅ Encargo completado por el especialista y entregado en pantalla." 
+});
   saveSessionState();
   btn.innerText = "Aprobar y Despachar a n8n";
   btn.disabled = false;
