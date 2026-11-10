@@ -1559,7 +1559,7 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       }, 5000);
     }
 
-    function procesarActualizacionSolicitud(registro, canal) {
+  function procesarActualizacionSolicitud(registro, canal) {
       if (!registro) return;
 
       // 1. Llegada de la compuerta HITL 1
@@ -1585,6 +1585,22 @@ Revisa y selecciona los documentos para activar la redacción técnica:
         removerDeTareasActivas(registro.solicitud_id);
         appendMessage(`⚠️ El encargo \`${registro.solicitud_id}\` fue cancelado en n8n.`, false);
         saveSessionState();
+        return;
+      }
+
+      // 3. Encargo de Arquitectura finalizado en segundo plano
+      if (registro.estado === 'finalizado_con_exito' && registro.borrador_especialista) {
+        if (canal) supabaseClient.removeChannel(canal);
+        removerDeTareasActivas(registro.solicitud_id);
+        
+        let entregable = registro.borrador_especialista.borrador || registro.borrador_especialista.respuesta_arquitecto || registro.borrador_especialista;
+        if (typeof entregable === 'object') entregable = JSON.stringify(entregable, null, 2);
+
+        const rowRespuesta = appendMessage(entregable, false);
+        enhanceCodeBlocks(rowRespuesta);
+        conversationHistory.push({ role: "assistant", content: "✅ Encargo completado por el arquitecto y entregado en pantalla." });
+        saveSessionState();
+        return;
       }
     }
 
