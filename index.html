@@ -1445,7 +1445,7 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
       }
     }
 
-    async function despacharPlan() {
+        async function despacharPlan() {
       const url = getWebhookUrl();
       const btn = document.getElementById('btnAprobar');
       
@@ -1458,10 +1458,10 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
         payload.solicitud_id = 'req_' + Date.now();
       }
       
-      btn.innerText = "Ejecutando en n8n...";
+      const reqId = payload.solicitud_id;
+      const clienteActual = payload.cliente_oficial || 'Cliente';
       btn.disabled = true;
-
-      const rowEspera = appendMessage("Iniciando ejecución y búsqueda de insumos en Google Drive...", false);
+      btn.innerText = "Despachando...";
 
       try {
         const response = await fetch(url, {
@@ -1476,93 +1476,123 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
 
         const data = await response.json();
 
-      // CÓDIGO CORREGIDO (CONTRATO UNIVERSAL):
-const entregable = data?.borrador || data?.respuesta_arquitecto;
+        // 1. Caso Síncrono (Arquitecto / Meta-encargos)
+        const entregable = data?.borrador || data?.respuesta_arquitecto;
+        if (entregable) {
+          const rowRespuesta = appendMessage(entregable, false);
+          enhanceCodeBlocks(rowRespuesta);
+          conversationHistory.push({ 
+            role: "assistant", 
+            content: "✅ Encargo completado por el especialista y entregado en pantalla." 
+          });
+          saveSessionState();
+          btn.innerText = "Aprobar y Despachar a n8n";
+          btn.disabled = false;
+          return;
+        }
 
-if (entregable) {
-  rowEspera.remove();
-  const rowRespuesta = appendMessage(entregable, false);
-  enhanceCodeBlocks(rowRespuesta);
-  conversationHistory.push({ 
-  role: "assistant", 
-  content: "✅ Encargo completado por el especialista y entregado en pantalla." 
-});
-  saveSessionState();
-  btn.innerText = "Aprobar y Despachar a n8n";
-  btn.disabled = false;
-  return;
-}
+        // 2. Caso Asíncrono (Pipelines Largos con HITL)
+        // Se notifica al consultor y se libera la UI de inmediato
+        appendMessage(
+          `🚀 **Encargo despachado a n8n** (ID: \`${reqId}\`).
 
-        monitorearHitl1(payload.solicitud_id, rowEspera, btn);
+El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo plano. Podés seguir usando este chat libremente; te avisaré por acá en cuanto la compuerta de insumos esté disponible.`,
+          false
+        );
+        saveSessionState();
+
+        // Reactivar el botón para futuros encargos
+        btn.innerText = "Aprobar y Despachar a n8n";
+        btn.disabled = false;
+
+        // Iniciar escucha reactiva en segundo plano
+        activarEscuchaEnSegundoPlano(reqId, clienteActual);
 
       } catch (err) {
-        rowEspera.remove();
-        appendMessage(`⚠️ Error de conexión con n8n: ${err.message}`, false);
+        appendMessage(`⚠️ Error al despachar a n8n: ${err.message}`, false);
         btn.innerText = "Aprobar y Despachar a n8n";
         btn.disabled = false;
       }
     }
 
-    function monitorearHitl1(solicitudId, rowEspera, btn) {
-      const sbUrl = getSbUrl();
-      const sbKey = getSbKey();
-      let intentos = 0;
-      const maxIntentos = 45;
+    function activarEscuchaEnSegundoPlano(solicitudId, clienteNombre) {
+      // Registrar tarea activa en localStorage para persistencia
+      let activas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
+      if (!activas.find(t => t.id === solicitudId)) {
+        activas.push({ id: solicitudId, cliente: clienteNombre, inicio: Date.now() });
+        localStorage.setItem("talox_tareas_activas", JSON.stringify(activas));
+      }
 
-      const timer = setInterval(async () => {
-        intentos++;
+      // Escucha vía Supabase Realtime (WebSockets nativos)
+      const canal = supabaseClient
+        .channel(`seguimiento_${solicitudId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'solicitudes_talox',
+            filter: `solicitud_id=eq.${solicitudId}`
+          },
+          (payloadUpdate) => {
+            procesarActualizacionSolicitud(payloadUpdate.new, canal);
+          }
+        )
+        .subscribe();
+
+      // Polling de respaldo en background cada 5s (sin timeout destructivo)
+      const intervalId = setInterval(async () => {
         try {
-          const res = await fetch(`${sbUrl}/rest/v1/solicitudes_talox?solicitud_id=eq.${solicitudId}&select=estado,hitl1_url`, {
-            headers: {
-              "apikey": sbKey,
-              "Authorization": `Bearer ${sbKey}`
-            }
-          });
+          const { data, error } = await supabaseClient
+            .from('solicitudes_talox')
+            .select('solicitud_id, estado, hitl1_url, borrador_especialista')
+            .eq('solicitud_id', solicitudId)
+            .single();
 
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-              const item = data[0];
-
-              if (item.hitl1_url) {
-                clearInterval(timer);
-                rowEspera.remove();
-
-                const mensajeHitl = `🎯 **Insumos identificados en Google Drive.**\n\nRevisa y selecciona los documentos para activar la redacción técnica:\n\n👉 <a href="${item.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
-
-                appendMessage(mensajeHitl, false);
-                conversationHistory.push({ role: "assistant", content: mensajeHitl });
-                saveSessionState();
-
-                btn.innerText = "Aprobar y Despachar a n8n";
-                btn.disabled = false;
-                return;
-              }
-
-              if (item.estado === 'cancelado') {
-                clearInterval(timer);
-                rowEspera.remove();
-                appendMessage("⚠️ El encargo fue cancelado.", false);
-                btn.innerText = "Aprobar y Despachar a n8n";
-                btn.disabled = false;
-                return;
-              }
+          if (!error && data) {
+            if (data.hitl1_url || data.estado === 'cancelado' || data.estado === 'finalizado_con_exito') {
+              clearInterval(intervalId);
+              procesarActualizacionSolicitud(data, canal);
             }
           }
-        } catch (e) {
-          console.warn("Sondeo Supabase:", e);
-        }
-
-        if (intentos >= maxIntentos) {
-          clearInterval(timer);
-          rowEspera.remove();
-          appendMessage("⚠️ Se agotó el tiempo esperando la pantalla de insumos.", false);
-          btn.innerText = "Aprobar y Despachar a n8n";
-          btn.disabled = false;
-        }
-      }, 2000);
+        } catch (_) {}
+      }, 5000);
     }
-    
-  </script>
+
+    function procesarActualizacionSolicitud(registro, canal) {
+      if (!registro) return;
+
+      // 1. Llegada de la compuerta HITL 1
+      if (registro.hitl1_url) {
+        if (canal) supabaseClient.removeChannel(canal);
+        removerDeTareasActivas(registro.solicitud_id);
+
+        const mensajeHitl = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.
+
+Revisa y selecciona los documentos para activar la redacción técnica:
+
+👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
+        
+        appendMessage(mensajeHitl, false);
+        conversationHistory.push({ role: "assistant", content: mensajeHitl });
+        saveSessionState();
+        return;
+      }
+
+      // 2. Encargo cancelado downstream
+      if (registro.estado === 'cancelado') {
+        if (canal) supabaseClient.removeChannel(canal);
+        removerDeTareasActivas(registro.solicitud_id);
+        appendMessage(`⚠️ El encargo \`${registro.solicitud_id}\` fue cancelado en n8n.`, false);
+        saveSessionState();
+      }
+    }
+
+    function removerDeTareasActivas(solicitudId) {
+      let activas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
+      activas = activas.filter(t => t.id !== solicitudId);
+      localStorage.setItem("talox_tareas_activas", JSON.stringify(activas));
+    }
+    </script>
 </body>
 </html>
