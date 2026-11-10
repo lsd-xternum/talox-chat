@@ -1501,18 +1501,7 @@ const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !
             // 1. Respetar el contrato: el cliente y servicio van a la raíz
            if (parsedState.cliente_oficial) payload.cliente_oficial = parsedState.cliente_oficial;
 
-if (parsedState.servicio_codigo) {
-  const codigo = parsedState.servicio_codigo.trim();
-  const existeEnCatalogo = dbCatalogo.some(c => c.codigo === codigo);
-
-  if (existeEnCatalogo || codigo === 'mejora_arquitectura' || codigo === 'sintetico_a_medida') {
-    payload.servicio_codigo = codigo;
-  } else if (payload.cliente_oficial === 'XTERNUM INTERNO') {
-    payload.servicio_codigo = 'mejora_arquitectura';
-  } else {
-    payload.servicio_codigo = 'sintetico_a_medida';
-  }
-}
+            if (parsedState.servicio_codigo) payload.servicio_codigo = parsedState.servicio_codigo;
             
             if (parsedState.estado_encuadre) payload.estado_encuadre = parsedState.estado_encuadre;
             if (parsedState.bloqueadores) payload.bloqueadores = parsedState.bloqueadores;
