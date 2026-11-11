@@ -1529,7 +1529,8 @@
     // Registro de eventos para evitar duplicación entre Realtime y Polling
     const eventosProcesados = new Set();
 
-    function activarEscuchaEnSegundoPlano(solicitudId, clienteNombre) {
+  
+function activarEscuchaEnSegundoPlano(solicitudId, clienteNombre) {
       let activas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
       if (!activas.find(t => t.id === solicitudId)) {
         activas.push({ id: solicitudId, cliente: clienteNombre, inicio: Date.now() });
@@ -1548,8 +1549,7 @@
             filter: `solicitud_id=eq.${solicitudId}`
           },
           (payloadUpdate) => {
-            if (intervalId) clearInterval(intervalId); // Cancela el polling
-            procesarActualizacionSolicitud(payloadUpdate.new, canal);
+            procesarActualizacionSolicitud(payloadUpdate.new, canal, () => clearInterval(intervalId));
           }
         )
         .subscribe();
@@ -1558,58 +1558,77 @@
         try {
           const { data, error } = await supabaseClient
             .from('solicitudes_talox')
-            .select('solicitud_id, estado, hitl1_url, borrador_especialista')
+            .select('solicitud_id, estado, hitl1_url, hitl2_url, borrador_especialista')
             .eq('solicitud_id', solicitudId)
             .single();
 
           if (!error && data) {
-            if (data.hitl1_url || data.estado === 'cancelado' || data.estado === 'finalizado_con_exito') {
-              clearInterval(intervalId);
-              procesarActualizacionSolicitud(data, canal);
-            }
+            procesarActualizacionSolicitud(data, canal, () => clearInterval(intervalId));
           }
         } catch (_) {}
       }, 5000);
     }
 
-    function procesarActualizacionSolicitud(registro, canal) {
+    function procesarActualizacionSolicitud(registro, canal, onFinalizar) {
       if (!registro) return;
 
-      const claveEvento = `${registro.solicitud_id}_${registro.estado}_${registro.hitl1_url ? 'hitl' : 'final'}`;
-      if (eventosProcesados.has(claveEvento)) return;
-      eventosProcesados.add(claveEvento);
-
+      // 1. Notificación HITL 1 (no cierra el canal)
       if (registro.hitl1_url) {
-        if (canal) supabaseClient.removeChannel(canal);
-        removerDeTareasActivas(registro.solicitud_id);
-        const mensajeHitl = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.\n\nRevisa y selecciona los documentos para activar la redacción técnica:\n\n👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
-        appendMessage(mensajeHitl, false);
-        conversationHistory.push({ role: "assistant", content: mensajeHitl });
-        saveSessionState();
-        return;
-      }
-
-      if (registro.estado === 'finalizado_con_exito' && registro.borrador_especialista) {
-        if (canal) supabaseClient.removeChannel(canal);
-        removerDeTareasActivas(registro.solicitud_id);
-        
-        let entregable = registro.borrador_especialista.borrador || registro.borrador_especialista.respuesta_arquitecto || registro.borrador_especialista;
-        if (typeof entregable === 'object') {
-            entregable = JSON.stringify(entregable, null, 2);
+        const claveHitl1 = `${registro.solicitud_id}_hitl1`;
+        if (!eventosProcesados.has(claveHitl1)) {
+          eventosProcesados.add(claveHitl1);
+          const mensajeHitl1 = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.\n\nRevisa y selecciona los documentos para activar la redacción técnica:\n\n👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
+          appendMessage(mensajeHitl1, false);
+          conversationHistory.push({ role: "assistant", content: mensajeHitl1 });
+          saveSessionState();
         }
+      }
 
-        const rowRespuesta = appendMessage(entregable, false);
-        enhanceCodeBlocks(rowRespuesta);
-        conversationHistory.push({ role: "assistant", content: "✅ Encargo completado por el especialista/arquitecto y entregado en pantalla." });
-        saveSessionState();
+      // 2. Notificación HITL 2 (Revisión Final)
+      if (registro.hitl2_url || registro.estado === 'hitl2_pendiente') {
+        const claveHitl2 = `${registro.solicitud_id}_hitl2`;
+        if (registro.hitl2_url && !eventosProcesados.has(claveHitl2)) {
+          eventosProcesados.add(claveHitl2);
+          const mensajeHitl2 = `📋 **Borrador técnico y auditoría listos para revisión final (HITL 2)** para \`${registro.solicitud_id}\`.\n\nIngresa para auditar el documento y aprobar la publicación final:\n\n👉 <a href="${registro.hitl2_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Revisión Final (HITL 2) ↗</a>`;
+          appendMessage(mensajeHitl2, false);
+          conversationHistory.push({ role: "assistant", content: mensajeHitl2 });
+          saveSessionState();
+        }
+      }
+
+      // 3. Finalizado con éxito (cierra canal y limpia tareas activas)
+      if (registro.estado === 'finalizado_con_exito' && registro.borrador_especialista) {
+        const claveFinal = `${registro.solicitud_id}_finalizado`;
+        if (!eventosProcesados.has(claveFinal)) {
+          eventosProcesados.add(claveFinal);
+          if (canal) supabaseClient.removeChannel(canal);
+          if (onFinalizar) onFinalizar();
+          removerDeTareasActivas(registro.solicitud_id);
+          
+          let entregable = registro.borrador_especialista.borrador || registro.borrador_especialista.respuesta_arquitecto || registro.borrador_especialista;
+          if (typeof entregable === 'object') {
+            entregable = JSON.stringify(entregable, null, 2);
+          }
+
+          const rowRespuesta = appendMessage(entregable, false);
+          enhanceCodeBlocks(rowRespuesta);
+          conversationHistory.push({ role: "assistant", content: "✅ Encargo completado por el especialista/arquitecto y entregado en pantalla." });
+          saveSessionState();
+        }
         return;
       }
 
+      // 4. Cancelado (cierra canal y limpia tareas activas)
       if (registro.estado === 'cancelado') {
-        if (canal) supabaseClient.removeChannel(canal);
-        removerDeTareasActivas(registro.solicitud_id);
-        appendMessage(`⚠️ El encargo \`${registro.solicitud_id}\` fue cancelado en n8n.`, false);
-        saveSessionState();
+        const claveCancel = `${registro.solicitud_id}_cancelado`;
+        if (!eventosProcesados.has(claveCancel)) {
+          eventosProcesados.add(claveCancel);
+          if (canal) supabaseClient.removeChannel(canal);
+          if (onFinalizar) onFinalizar();
+          removerDeTareasActivas(registro.solicitud_id);
+          appendMessage(`⚠️ El encargo \`${registro.solicitud_id}\` fue cancelado en n8n.`, false);
+          saveSessionState();
+        }
       }
     }
 
