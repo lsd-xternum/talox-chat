@@ -1563,6 +1563,7 @@ function activarEscuchaEnSegundoPlano(solicitudId, clienteNombre) {
             .single();
 
           if (!error && data) {
+            // Se quitó el clearInterval anticipado para que siga escuchando
             procesarActualizacionSolicitud(data, canal, () => clearInterval(intervalId));
           }
         } catch (_) {}
