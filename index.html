@@ -1319,8 +1319,7 @@ if (esEncargoInterno) {
       if (isUser) {
         row.innerHTML = `<div class="bubble user">${text}</div>`;
       } else {
-        const textoLimpio = typeof text === 'string' ? text.replace(/\n/g, '
-') : text;
+        const textoLimpio = typeof text === 'string' ? text.replace(/\\n/g, '\n') : text;
         row.innerHTML = `
           <div class="avatar-espartano">
             ${TALOX_AVATAR_SVG}
@@ -1464,8 +1463,7 @@ if (esEncargoInterno) {
           }
         }
 
-        const textoLimpio = typeof displayText === 'string' ? displayText.replace(/\n/g, '
-') : displayText;
+        const textoLimpio = typeof displayText === 'string' ? displayText.replace(/\\n/g, '\n') : displayText;
         bubble.innerHTML = marked.parse(textoLimpio);
         enhanceCodeBlocks(bubble);
         
@@ -1713,7 +1711,9 @@ Verifica que la plantilla y su esquema estén cargados en Supabase antes de rela
       }
 
       // 3. Finalizado con éxito (cierra canal y limpia tareas activas)
-      if (registro.estado === 'finalizado_con_exito') {
+      // El orquestador pasa de 'finalizado_con_exito' a 'completado' en pocos milisegundos;
+      // se aceptan ambos para no perder el aviso si la consulta llega después del segundo cambio.
+      if (registro.estado === 'finalizado_con_exito' || registro.estado === 'completado') {
         const claveFinal = `${registro.solicitud_id}_finalizado`;
         if (!eventosProcesados.has(claveFinal)) {
           eventosProcesados.add(claveFinal);
@@ -1729,15 +1729,40 @@ Verifica que la plantilla y su esquema estén cargados en Supabase antes de rela
             }
             htmlMensaje = entregable;
           } else {
-            // Si es un entregable (501, 502, etc.), damos el aviso limpio con la URL
-            const docUrl = registro.documento_final_url || registro.url_documento || registro.hitl2_url || "#";
-            htmlMensaje = `✅ **Ya está listo el documento.**
+            // Entregable de cliente (501, 502, etc.): n8n guarda la lista final en `entregables_finales`
+            const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            let entregables = Array.isArray(registro.entregables_finales) ? registro.entregables_finales : [];
+            // Compatibilidad con solicitudes anteriores, que guardaban un único documento en decision_hitl2
+            if (entregables.length === 0 && registro.decision_hitl2 && registro.decision_hitl2.documento_url) {
+              entregables = [{ tipo: 'documento', nombre: 'Documento Final', url: registro.decision_hitl2.documento_url }];
+            }
+            // Solo se imprimen enlaces https; nunca se cae a la URL de HITL 2, que deja de existir al cerrarse
+            const enlaces = entregables.filter(e => e && /^https:\/\//i.test(String(e.url || '')));
+            const estiloLink = 'color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;';
+            const linkHtml = (e, etiqueta) => `👉 <a href="${escHtml(e.url)}" target="_blank" rel="noopener noreferrer" style="${estiloLink}">${escHtml(etiqueta)} ↗</a>`;
+
+            if (enlaces.length === 1) {
+              htmlMensaje = `✅ **Ya está listo el documento.**
 
 El entregable técnico ha sido redactado y validado con éxito.
 
-👉 <a href="${docUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Documento Final ↗</a>
+${linkHtml(enlaces[0], 'Abrir Documento Final')}
 
 *Cuando lo valides, no olvides moverlo a la carpeta correspondiente del cliente.*`;
+            } else if (enlaces.length > 1) {
+              const lista = enlaces.map(e => linkHtml(e, `Abrir ${e.nombre || e.tipo || 'documento'}`)).join('\n\n');
+              htmlMensaje = `✅ **Ya están listos los documentos.**
+
+El entregable técnico ha sido redactado y validado con éxito. Se generaron ${enlaces.length} archivos:
+
+${lista}
+
+*Cuando los valides, no olvides moverlos a la carpeta correspondiente del cliente.*`;
+            } else {
+              htmlMensaje = `✅ **El entregable fue aprobado**, pero no recibí el enlace al documento.
+
+Búscalo en la carpeta de entregables de Drive o avisa al equipo de TaloX para revisar el cierre de \`${escHtml(registro.solicitud_id)}\`.`;
+            }
           }
 
           const rowRespuesta = appendMessage(htmlMensaje, false);
