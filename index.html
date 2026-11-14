@@ -897,6 +897,10 @@
     let dbDirectivas = [];
     let dbClientes = [];
     let currentUserSession = null;
+    
+    // GESTIÓN DE MEMORIA PARA LISTENERS ACTIVOS
+    const canalesActivos = new Map();
+    const intervalosActivos = new Map();
 
     let conversationHistory = [];
     let payload = {
@@ -1078,7 +1082,9 @@
 
                 const nombreCliente = payload.cliente_oficial || "el cliente";
                 const nombreTarea = (typeof mo === "object" && mo.tarea_titulo) ? mo.tarea_titulo : "Tarea de Asana";
-                const saludo = `Hola! Recibí el encargo desde Asana para **${nombreCliente}** sobre: **${nombreTarea}**.\n\nYa cargué la información base en el panel de encuadre. Revisemos el objetivo de negocio y el alcance metodológico para definir el plan de ejecución:`;
+                const saludo = `Hola! Recibí el encargo desde Asana para **${nombreCliente}** sobre: **${nombreTarea}**.
+
+Ya cargué la información base en el panel de encuadre. Revisemos el objetivo de negocio y el alcance metodológico para definir el plan de ejecución:`;
 
                 conversationHistory = [{ role: "assistant", content: saludo }];
                 saveSessionState();
@@ -1228,7 +1234,9 @@
       if (typeof payload.mandato_operativo === 'object' && payload.mandato_operativo !== null) {
         const tit = payload.mandato_operativo.tarea_titulo || payload.mandato_operativo.cliente_oficial || '';
         const desc = payload.mandato_operativo.tarea_descripcion && payload.mandato_operativo.tarea_descripcion !== 'Sin descripción' ? payload.mandato_operativo.tarea_descripcion : '';
-        const res = payload.mandato_operativo.resumen_analisis ? `\n\n*Nota TaloX:* ${payload.mandato_operativo.resumen_analisis}` : '';
+        const res = payload.mandato_operativo.resumen_analisis ? `
+
+*Nota TaloX:* ${payload.mandato_operativo.resumen_analisis}` : '';
         mandatoUI = [tit, desc].filter(Boolean).join(" - ") + res;
       } else if (payload.mandato_operativo) {
         mandatoUI = payload.mandato_operativo;
@@ -1311,7 +1319,8 @@ if (esEncargoInterno) {
       if (isUser) {
         row.innerHTML = `<div class="bubble user">${text}</div>`;
       } else {
-        const textoLimpio = typeof text === 'string' ? text.replace(/\\n/g, '\n') : text;
+        const textoLimpio = typeof text === 'string' ? text.replace(/\n/g, '
+') : text;
         row.innerHTML = `
           <div class="avatar-espartano">
             ${TALOX_AVATAR_SVG}
@@ -1403,7 +1412,7 @@ if (esEncargoInterno) {
       const userText = input.value.trim();
       if (!userText) return;
 
-      const asanaMatch = userText.match(/app\.asana\.com[\\\/]+0[\\\/]+(?:[^"\\/\s<>]+[\\\/]+)+(\d{10,20})/);
+      const asanaMatch = userText.match(/app\.asana\.com[\\/]+0[\\/]+(?:[^"\/\s<>]+[\\/]+)+(\d{10,20})/);
       if (asanaMatch) {
         payload.task_gid = asanaMatch[1];
         payload.asana_task_url = asanaMatch[0].startsWith('http') ? asanaMatch[0] : `https://${asanaMatch[0]}`;
@@ -1455,7 +1464,8 @@ if (esEncargoInterno) {
           }
         }
 
-        const textoLimpio = typeof displayText === 'string' ? displayText.replace(/\\n/g, '\n') : displayText;
+        const textoLimpio = typeof displayText === 'string' ? displayText.replace(/\n/g, '
+') : displayText;
         bubble.innerHTML = marked.parse(textoLimpio);
         enhanceCodeBlocks(bubble);
         
@@ -1524,8 +1534,12 @@ if (esEncargoInterno) {
         }
 
         const msgDespacho = esArquitecto
-          ? `🚀 **Encargo despachado al Arquitecto Jefe** (ID: \`${reqId}\`).\n\nAnalizando arquitectura y base de datos en segundo plano; el informe aparecerá directamente aquí al finalizar.`
-          : `🚀 **Encargo despachado a n8n** (ID: \`${reqId}\`).\n\nEl pipeline agéntico para **${clienteActual}** está ejecutándose en segundo plano. Podés seguir usando este chat libremente; te avisaré por acá en cuanto la compuerta de insumos esté disponible.`;
+          ? `🚀 **Encargo despachado al Arquitecto Jefe** (ID: \`${reqId}\`).
+
+Analizando arquitectura y base de datos en segundo plano; el informe aparecerá directamente aquí al finalizar.`
+          : `🚀 **Encargo despachado a n8n** (ID: \`${reqId}\`).
+
+El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo plano. Podés seguir usando este chat libremente; te avisaré por acá en cuanto la compuerta de insumos esté disponible.`;
 
         appendMessage(msgDespacho, false);
         conversationHistory.push({ role: "assistant", content: msgDespacho });
@@ -1552,11 +1566,24 @@ if (esEncargoInterno) {
         localStorage.setItem("talox_tareas_activas", JSON.stringify(activas));
       }
 
+      // LIMPIEZA: Remover cualquier escucha o polling previo para evitar duplicaciones
+      if (canalesActivos.has(solicitudId)) {
+        supabaseClient.removeChannel(canalesActivos.get(solicitudId));
+        canalesActivos.delete(solicitudId);
+      }
+      if (intervalosActivos.has(solicitudId)) {
+        clearInterval(intervalosActivos.get(solicitudId));
+        intervalosActivos.delete(solicitudId);
+      }
+
       let intervalId = null;
       const detenerPolling = () => {
         if (intervalId) {
           clearInterval(intervalId);
           intervalId = null;
+        }
+        if (intervalosActivos.has(solicitudId)) {
+          intervalosActivos.delete(solicitudId);
         }
       };
 
@@ -1600,15 +1627,21 @@ if (esEncargoInterno) {
           if (status === 'SUBSCRIBED') consultarEstado();
         });
 
+      canalesActivos.set(solicitudId, canal);
+
       consultarEstado();
       intervalId = setInterval(consultarEstado, 5000);
+      intervalosActivos.set(solicitudId, intervalId);
     }
 
     function procesarActualizacionSolicitud(registro, canal, onFinalizar, esArquitectoFlag = false) {
       if (!registro) return;
 
       const cerrarEscucha = () => {
-        if (canal) supabaseClient.removeChannel(canal);
+        if (canal) {
+            supabaseClient.removeChannel(canal);
+            canalesActivos.delete(registro.solicitud_id);
+        }
         if (typeof onFinalizar === 'function') onFinalizar();
         removerDeTareasActivas(registro.solicitud_id);
       };
@@ -1626,7 +1659,11 @@ if (esEncargoInterno) {
           const claveHitl1 = `${registro.solicitud_id}_hitl1`;
           if (!eventosProcesados.has(claveHitl1)) {
             eventosProcesados.add(claveHitl1);
-            const mensajeHitl1 = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.\n\nRevisa y selecciona los documentos para activar la redacción técnica:\n\n👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
+            const mensajeHitl1 = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.
+
+Revisa y selecciona los documentos para activar la redacción técnica:
+
+👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
             appendMessage(mensajeHitl1, false);
             conversationHistory.push({ role: "assistant", content: mensajeHitl1 });
             saveSessionState();
@@ -1637,7 +1674,11 @@ if (esEncargoInterno) {
           const claveHitl2 = `${registro.solicitud_id}_hitl2`;
           if (registro.hitl2_url && !eventosProcesados.has(claveHitl2)) {
             eventosProcesados.add(claveHitl2);
-            const mensajeHitl2 = `📋 **Borrador técnico y auditoría listos para revisión final (HITL 2)** para \`${registro.solicitud_id}\`.\n\nIngresa para auditar el documento y aprobar la publicación final:\n\n👉 <a href="${registro.hitl2_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Revisión Final (HITL 2) ↗</a>`;
+            const mensajeHitl2 = `📋 **Borrador técnico y auditoría listos para revisión final (HITL 2)** para \`${registro.solicitud_id}\`.
+
+Ingresa para auditar el documento y aprobar la publicación final:
+
+👉 <a href="${registro.hitl2_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Revisión Final (HITL 2) ↗</a>`;
             appendMessage(mensajeHitl2, false);
             conversationHistory.push({ role: "assistant", content: mensajeHitl2 });
             saveSessionState();
@@ -1655,10 +1696,15 @@ if (esEncargoInterno) {
           const log = Array.isArray(registro.errores_log) ? registro.errores_log[0] : (registro.errores_log || {});
           const motivo = log.motivo || 'Falta el esquema del entregable o datos obligatorios para ejecutar el especialista.';
           const faltantes = Array.isArray(log.campos_faltantes) && log.campos_faltantes.length > 0
-            ? `\n- **Campos faltantes:** \`${log.campos_faltantes.join(', ')}\``
+            ? `
+- **Campos faltantes:** \`${log.campos_faltantes.join(', ')}\``
             : '';
 
-          const mensajeAlerta = `⚠️ **Ejecución detenida por datos incompletos** (\`${registro.solicitud_id}\`).\n\n- **Motivo:** ${motivo}${faltantes}\n\nVerifica que la plantilla y su esquema estén cargados en Supabase antes de relanzar el encargo.`;
+          const mensajeAlerta = `⚠️ **Ejecución detenida por datos incompletos** (\`${registro.solicitud_id}\`).
+
+- **Motivo:** ${motivo}${faltantes}
+
+Verifica que la plantilla y su esquema estén cargados en Supabase antes de relanzar el encargo.`;
           appendMessage(mensajeAlerta, false);
           conversationHistory.push({ role: "assistant", content: mensajeAlerta });
           saveSessionState();
@@ -1685,7 +1731,13 @@ if (esEncargoInterno) {
           } else {
             // Si es un entregable (501, 502, etc.), damos el aviso limpio con la URL
             const docUrl = registro.documento_final_url || registro.url_documento || registro.hitl2_url || "#";
-            htmlMensaje = `✅ **Ya está listo el documento.**\n\nEl entregable técnico ha sido redactado y validado con éxito.\n\n👉 <a href="${docUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Documento Final ↗</a>\n\n*Cuando lo valides, no olvides moverlo a la carpeta correspondiente del cliente.*`;
+            htmlMensaje = `✅ **Ya está listo el documento.**
+
+El entregable técnico ha sido redactado y validado con éxito.
+
+👉 <a href="${docUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Documento Final ↗</a>
+
+*Cuando lo valides, no olvides moverlo a la carpeta correspondiente del cliente.*`;
           }
 
           const rowRespuesta = appendMessage(htmlMensaje, false);
