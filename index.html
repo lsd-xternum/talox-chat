@@ -1646,20 +1646,34 @@
       }
 
       // 3. Finalizado con éxito (cierra canal y limpia tareas activas)
-      if (registro.estado === 'finalizado_con_exito' && registro.borrador_especialista) {
+      if (registro.estado === 'finalizado_con_exito') {
         const claveFinal = `${registro.solicitud_id}_finalizado`;
         if (!eventosProcesados.has(claveFinal)) {
           eventosProcesados.add(claveFinal);
           cerrarEscucha();
           
-          let entregable = registro.borrador_especialista.borrador || registro.borrador_especialista.respuesta_arquitecto || registro.borrador_especialista;
-          if (typeof entregable === 'object') {
-            entregable = JSON.stringify(entregable, null, 2);
+          let htmlMensaje = "";
+          
+          if (esArquitecto) {
+            // Si es el Arquitecto 14, SÍ volcamos el markdown/JSON al muro
+            let entregable = registro.borrador_especialista?.respuesta_arquitecto || registro.borrador_especialista?.borrador || registro.borrador_especialista;
+            if (typeof entregable === 'object') {
+              entregable = JSON.stringify(entregable, null, 2);
+            }
+            htmlMensaje = entregable;
+          } else {
+            // Si es un entregable (501, 502, etc.), damos el aviso limpio con la URL
+            const docUrl = registro.documento_final_url || registro.url_documento || registro.hitl2_url || "#";
+            htmlMensaje = `✅ **Ya está listo el documento.**\n\nEl entregable técnico ha sido redactado y validado con éxito.\n\n👉 <a href="${docUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Documento Final ↗</a>\n\n*Cuando lo valides, no olvides moverlo a la carpeta correspondiente del cliente.*`;
           }
 
-          const rowRespuesta = appendMessage(entregable, false);
-          enhanceCodeBlocks(rowRespuesta);
-          conversationHistory.push({ role: "assistant", content: entregable });
+          const rowRespuesta = appendMessage(htmlMensaje, false);
+          if (esArquitecto) enhanceCodeBlocks(rowRespuesta);
+          
+          conversationHistory.push({ 
+            role: "assistant", 
+            content: esArquitecto ? htmlMensaje : "✅ Documento finalizado y entregado." 
+          });
           saveSessionState();
         }
         return;
