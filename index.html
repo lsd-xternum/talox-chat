@@ -1568,11 +1568,11 @@
         )
         .subscribe();
 
-      intervalId = setInterval(async () => {
+     intervalId = setInterval(async () => {
         try {
           const { data, error } = await supabaseClient
             .from('solicitudes_talox')
-            .select('solicitud_id, cliente_oficial, servicio_codigo, estado, hitl1_url, hitl2_url, borrador_especialista, errores_log')
+            .select('solicitud_id, cliente_oficial, servicio_codigo, estado, hitl1_url, hitl2_url, url_documento, documento_final_url, borrador_especialista, errores_log')
             .eq('solicitud_id', solicitudId)
             .single();
 
