@@ -1238,14 +1238,14 @@
         }
       }
 
-      const esEncargoInterno = payload.servicio_codigo === 'mejora_arquitectura' || 
-        payload.servicio_codigo === 'sintetico_a_medida' ||
-        (payload.plan_agente && payload.plan_agente.some(t => t.capacidad === 'arquitecto_talox' || (t.nombre && t.nombre.toLowerCase().includes('arquitecto'))));
+     const esEncargoInterno = payload.cliente_oficial === 'XTERNUM INTERNO' ||
+  payload.servicio_codigo === 'mejora_arquitectura' ||
+  (Array.isArray(payload.plan_agente) && payload.plan_agente.some(t => t.capacidad === 'arquitecto_talox'));
 
-      if (esEncargoInterno) {
-        if (!payload.cliente_oficial || payload.cliente_oficial === '--') payload.cliente_oficial = 'XTERNUM INTERNO';
-        if (!payload.servicio_codigo || payload.servicio_codigo === '--' || payload.servicio_codigo === 'en_definicion') payload.servicio_codigo = 'sintetico_a_medida';
-      }
+if (esEncargoInterno) {
+  if (!payload.cliente_oficial || payload.cliente_oficial === '--') payload.cliente_oficial = 'XTERNUM INTERNO';
+  if (!payload.servicio_codigo || payload.servicio_codigo === '--' || payload.servicio_codigo === 'en_definicion') payload.servicio_codigo = 'mejora_arquitectura';
+}
 
       const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
       const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !== 'en_definicion' && payload.servicio_codigo !== '--';
