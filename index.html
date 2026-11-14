@@ -1660,7 +1660,7 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       // Cada enlace de revisión es de un solo uso: se avisa una vez por enlace, no una vez por solicitud.
       // Así, cada nueva ronda (HITL 1 o HITL 2 tras una iteración) imprime su propio enlace.
       if (!esArquitecto) {
-        if (esUrlHttps(registro.hitl1_url)) {
+       if (registro.estado === 'hitl1_pendiente' && esUrlHttps(registro.hitl1_url))  {
           const claveHitl1 = `${registro.solicitud_id}_hitl1_${registro.hitl1_url}`;
           if (!eventosProcesados.has(claveHitl1)) {
             eventosProcesados.add(claveHitl1);
@@ -1680,7 +1680,7 @@ ${enlaceHtml(registro.hitl1_url, 'Abrir Pantalla de Validación (HITL 1)')}`;
           }
         }
 
-        if (esUrlHttps(registro.hitl2_url)) {
+        if (registro.estado === 'hitl2_pendiente' && esUrlHttps(registro.hitl2_url)) {
           const claveHitl2 = `${registro.solicitud_id}_hitl2_${registro.hitl2_url}`;
           if (!eventosProcesados.has(claveHitl2)) {
             eventosProcesados.add(claveHitl2);
