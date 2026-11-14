@@ -1131,6 +1131,14 @@
           }
         } catch (e) { console.warn("Fallo al restaurar historial:", e); }
       }
+
+      // Reanudar escucha de tareas pendientes si se recargó la pestaña
+      try {
+        const activas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
+        activas.forEach(t => {
+          if (t && t.id) activarEscuchaEnSegundoPlano(t.id, t.cliente || "Cliente", Boolean(t.esArquitecto));
+        });
+      } catch (_) {}
     }
 
     function nuevaSesion() {
@@ -1552,35 +1560,48 @@ if (esEncargoInterno) {
         }
       };
 
+      const consultarEstado = async () => {
+        try {
+          const { data, error } = await supabaseClient
+            .from('solicitudes_talox')
+            .select('*')
+            .eq('solicitud_id', solicitudId)
+            .maybeSingle();
+
+          if (error) {
+            console.warn(`[TaloX Polling ${solicitudId}]`, error.message);
+            return;
+          }
+          if (data) {
+            procesarActualizacionSolicitud(data, canal, detenerPolling, esArquitecto);
+          }
+        } catch (err) {
+          console.warn(`[TaloX Polling ${solicitudId}]`, err);
+        }
+      };
+
       const canal = supabaseClient
         .channel(`seguimiento_${solicitudId}`)
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*',
             schema: 'public',
             table: 'solicitudes_talox',
             filter: `solicitud_id=eq.${solicitudId}`
           },
-          (payloadUpdate) => {
-            procesarActualizacionSolicitud(payloadUpdate.new, canal, detenerPolling, esArquitecto);
+          (payloadEvent) => {
+            if (payloadEvent.new) {
+              procesarActualizacionSolicitud(payloadEvent.new, canal, detenerPolling, esArquitecto);
+            }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') consultarEstado();
+        });
 
-     intervalId = setInterval(async () => {
-        try {
-          const { data, error } = await supabaseClient
-            .from('solicitudes_talox')
-            .select('solicitud_id, cliente_oficial, servicio_codigo, estado, hitl1_url, hitl2_url, url_documento, documento_final_url, borrador_especialista, errores_log')
-            .eq('solicitud_id', solicitudId)
-            .single();
-
-          if (!error && data) {
-            procesarActualizacionSolicitud(data, canal, detenerPolling, esArquitecto);
-          }
-        } catch (_) {}
-      }, 5000);
+      consultarEstado();
+      intervalId = setInterval(consultarEstado, 5000);
     }
 
     function procesarActualizacionSolicitud(registro, canal, onFinalizar, esArquitectoFlag = false) {
