@@ -1556,6 +1556,11 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
 
     // Registro de eventos para evitar duplicación entre Realtime y Polling
     const eventosProcesados = new Set();
+    const rondasHitl = new Map(); // solicitud + tipo de revisión -> cuántos enlaces de revisión se mostraron
+    const ESTILO_ENLACE = 'color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;';
+    const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const esUrlHttps = (u) => typeof u === 'string' && /^https:\/\//i.test(u);
+    const enlaceHtml = (url, texto) => `👉 <a href="${escHtml(url)}" target="_blank" rel="noopener noreferrer" style="${ESTILO_ENLACE}">${escHtml(texto)} ↗</a>`;
 
     function activarEscuchaEnSegundoPlano(solicitudId, clienteNombre, esArquitecto = false) {
       let activas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
@@ -1652,33 +1657,62 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       );
 
       // 1. Notificaciones HITL 1 y HITL 2 (solo aplican a entregables de clientes, nunca al Arquitecto 14)
+      // Cada enlace de revisión es de un solo uso: se avisa una vez por enlace, no una vez por solicitud.
+      // Así, cada nueva ronda (HITL 1 o HITL 2 tras una iteración) imprime su propio enlace.
       if (!esArquitecto) {
-        if (registro.hitl1_url) {
-          const claveHitl1 = `${registro.solicitud_id}_hitl1`;
+        if (esUrlHttps(registro.hitl1_url)) {
+          const claveHitl1 = `${registro.solicitud_id}_hitl1_${registro.hitl1_url}`;
           if (!eventosProcesados.has(claveHitl1)) {
             eventosProcesados.add(claveHitl1);
-            const mensajeHitl1 = `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.
+            const rondaHitl1 = (rondasHitl.get(`${registro.solicitud_id}_hitl1`) || 0) + 1;
+            rondasHitl.set(`${registro.solicitud_id}_hitl1`, rondaHitl1);
+            const tituloHitl1 = rondaHitl1 === 1
+              ? `🎯 **Insumos identificados en Google Drive** para \`${registro.solicitud_id}\`.`
+              : `🎯 **Nuevo encuadre listo para validar (ronda ${rondaHitl1})** para \`${registro.solicitud_id}\`.`;
+            const mensajeHitl1 = `${tituloHitl1}
 
 Revisa y selecciona los documentos para activar la redacción técnica:
 
-👉 <a href="${registro.hitl1_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Validación (HITL 1) ↗</a>`;
+${enlaceHtml(registro.hitl1_url, 'Abrir Pantalla de Validación (HITL 1)')}`;
             appendMessage(mensajeHitl1, false);
             conversationHistory.push({ role: "assistant", content: mensajeHitl1 });
             saveSessionState();
           }
         }
 
-        if (registro.hitl2_url || registro.estado === 'hitl2_pendiente') {
-          const claveHitl2 = `${registro.solicitud_id}_hitl2`;
-          if (registro.hitl2_url && !eventosProcesados.has(claveHitl2)) {
+        if (esUrlHttps(registro.hitl2_url)) {
+          const claveHitl2 = `${registro.solicitud_id}_hitl2_${registro.hitl2_url}`;
+          if (!eventosProcesados.has(claveHitl2)) {
             eventosProcesados.add(claveHitl2);
-            const mensajeHitl2 = `📋 **Borrador técnico y auditoría listos para revisión final (HITL 2)** para \`${registro.solicitud_id}\`.
+            const rondaHitl2 = (rondasHitl.get(`${registro.solicitud_id}_hitl2`) || 0) + 1;
+            rondasHitl.set(`${registro.solicitud_id}_hitl2`, rondaHitl2);
+            const tituloHitl2 = rondaHitl2 === 1
+              ? `📋 **Borrador técnico y auditoría listos para revisión final (HITL 2)** para \`${registro.solicitud_id}\`.`
+              : `📋 **Nueva versión del borrador lista para revisión final (HITL 2, ronda ${rondaHitl2})** para \`${registro.solicitud_id}\`.`;
+            const mensajeHitl2 = `${tituloHitl2}
 
 Ingresa para auditar el documento y aprobar la publicación final:
 
-👉 <a href="${registro.hitl2_url}" target="_blank" rel="noopener noreferrer" style="color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;">Abrir Pantalla de Revisión Final (HITL 2) ↗</a>`;
+${enlaceHtml(registro.hitl2_url, 'Abrir Pantalla de Revisión Final (HITL 2)')}`;
             appendMessage(mensajeHitl2, false);
             conversationHistory.push({ role: "assistant", content: mensajeHitl2 });
+            saveSessionState();
+          }
+        }
+
+        // Aviso mientras el especialista reescribe tras un ajuste pedido en HITL 2.
+        // La marca de tiempo de la decisión identifica la iteración; los dos estados que la siguen cuentan como una sola.
+        if (registro.estado === 'hitl2_iterando' || registro.estado === 'reintentando_especialista') {
+          const marcaIteracion = (registro.decision_hitl2 && registro.decision_hitl2.timestamp_decision)
+            || `ronda${rondasHitl.get(`${registro.solicitud_id}_hitl2`) || 0}`;
+          const claveReescritura = `${registro.solicitud_id}_reescritura_${marcaIteracion}`;
+          if (!eventosProcesados.has(claveReescritura)) {
+            eventosProcesados.add(claveReescritura);
+            const mensajeReescritura = `🔄 **Recibí tus ajustes** para \`${registro.solicitud_id}\`.
+
+Estoy redactando una nueva versión del borrador; te aviso apenas esté lista para revisar.`;
+            appendMessage(mensajeReescritura, false);
+            conversationHistory.push({ role: "assistant", content: mensajeReescritura });
             saveSessionState();
           }
         }
@@ -1730,16 +1764,14 @@ Verifica que la plantilla y su esquema estén cargados en Supabase antes de rela
             htmlMensaje = entregable;
           } else {
             // Entregable de cliente (501, 502, etc.): n8n guarda la lista final en `entregables_finales`
-            const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             let entregables = Array.isArray(registro.entregables_finales) ? registro.entregables_finales : [];
             // Compatibilidad con solicitudes anteriores, que guardaban un único documento en decision_hitl2
             if (entregables.length === 0 && registro.decision_hitl2 && registro.decision_hitl2.documento_url) {
               entregables = [{ tipo: 'documento', nombre: 'Documento Final', url: registro.decision_hitl2.documento_url }];
             }
             // Solo se imprimen enlaces https; nunca se cae a la URL de HITL 2, que deja de existir al cerrarse
-            const enlaces = entregables.filter(e => e && /^https:\/\//i.test(String(e.url || '')));
-            const estiloLink = 'color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;';
-            const linkHtml = (e, etiqueta) => `👉 <a href="${escHtml(e.url)}" target="_blank" rel="noopener noreferrer" style="${estiloLink}">${escHtml(etiqueta)} ↗</a>`;
+            const enlaces = entregables.filter(e => e && esUrlHttps(e.url));
+            const linkHtml = (e, etiqueta) => enlaceHtml(e.url, etiqueta);
 
             if (enlaces.length === 1) {
               htmlMensaje = `✅ **Ya está listo el documento.**
