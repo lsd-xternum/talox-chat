@@ -1140,7 +1140,9 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
 
       // Reanudar escucha de tareas pendientes si se recargó la pestaña
       try {
-        const activas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
+        const todas = JSON.parse(localStorage.getItem("talox_tareas_activas") || "[]");
+        const activas = todas.filter(t => t && t.id && (!t.inicio || Date.now() - t.inicio < TTL_TAREA_ACTIVA_MS));
+        if (activas.length !== todas.length) localStorage.setItem("talox_tareas_activas", JSON.stringify(activas));
         activas.forEach(t => {
           if (t && t.id) activarEscuchaEnSegundoPlano(t.id, t.cliente || "Cliente", Boolean(t.esArquitecto));
         });
@@ -1559,6 +1561,12 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
     const rondasHitl = new Map(); // solicitud + tipo de revisión -> cuántos enlaces de revisión se mostraron
     const ESTILO_ENLACE = 'color: var(--xt-verde); font-weight: 700; text-decoration: underline; font-size: 14px;';
     const escHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    // Tras recargar la página el Set de eventos queda vacío; el historial del chat sí se restaura.
+    // Un enlace de revisión (de un solo uso) que ya figura en el historial no se vuelve a avisar.
+    const yaAvisadoEnHistorial = (url) => typeof url === 'string' && url !== '' &&
+      conversationHistory.some(m => m && typeof m.content === 'string' && m.content.includes(escHtml(url)));
+    // Una tarea en seguimiento que lleva más de esto sin cerrarse se considera abandonada y se deja de vigilar.
+    const TTL_TAREA_ACTIVA_MS = 48 * 60 * 60 * 1000;
     const esUrlHttps = (u) => typeof u === 'string' && /^https:\/\//i.test(u);
     const enlaceHtml = (url, texto) => `👉 <a href="${escHtml(url)}" target="_blank" rel="noopener noreferrer" style="${ESTILO_ENLACE}">${escHtml(texto)} ↗</a>`;
 
@@ -1662,7 +1670,7 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       if (!esArquitecto) {
        if (registro.estado === 'hitl1_pendiente' && esUrlHttps(registro.hitl1_url))  {
           const claveHitl1 = `${registro.solicitud_id}_hitl1_${registro.hitl1_url}`;
-          if (!eventosProcesados.has(claveHitl1)) {
+          if (!eventosProcesados.has(claveHitl1) && !yaAvisadoEnHistorial(registro.hitl1_url)) {
             eventosProcesados.add(claveHitl1);
             const rondaHitl1 = (rondasHitl.get(`${registro.solicitud_id}_hitl1`) || 0) + 1;
             rondasHitl.set(`${registro.solicitud_id}_hitl1`, rondaHitl1);
@@ -1682,7 +1690,7 @@ ${enlaceHtml(registro.hitl1_url, 'Abrir Pantalla de Validación (HITL 1)')}`;
 
         if (registro.estado === 'hitl2_pendiente' && esUrlHttps(registro.hitl2_url)) {
           const claveHitl2 = `${registro.solicitud_id}_hitl2_${registro.hitl2_url}`;
-          if (!eventosProcesados.has(claveHitl2)) {
+          if (!eventosProcesados.has(claveHitl2) && !yaAvisadoEnHistorial(registro.hitl2_url)) {
             eventosProcesados.add(claveHitl2);
             const rondaHitl2 = (rondasHitl.get(`${registro.solicitud_id}_hitl2`) || 0) + 1;
             rondasHitl.set(`${registro.solicitud_id}_hitl2`, rondaHitl2);
