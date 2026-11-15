@@ -1191,7 +1191,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
 
       try {
         const headers = { "apikey": key, "Authorization": `Bearer ${key}` };
-        const resCat = await fetch(`${url}/rest/v1/catalogo_entregables?select=*`, { headers });
+        const resCat = await fetch(`${url}/rest/v1/plantillas?select=codigo,nombre,area_codigo&activo=eq.true&estado=eq.aprobado`, { headers });
         if (resCat.ok) dbCatalogo = await resCat.json();
 
         const resFlujos = await fetch(`${url}/rest/v1/flujos_n8n_activos?select=*`, { headers });
