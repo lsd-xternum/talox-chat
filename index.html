@@ -1728,25 +1728,32 @@ Estoy redactando una nueva versión del borrador; te aviso apenas esté lista pa
         }
       }
 
-      // 2. Corte temprano por datos / esquema incompletos
-      if (registro.estado === 'datos_incompletos') {
-        const claveIncompleto = `${registro.solicitud_id}_datos_incompletos`;
-        if (!eventosProcesados.has(claveIncompleto)) {
-          eventosProcesados.add(claveIncompleto);
+      // 2. Corte temprano por error del sistema: datos/esquema incompletos o fallo del especialista
+      if (['datos_incompletos', 'error_sistema', 'error_especialista'].includes(registro.estado)) {
+        const claveError = `${registro.solicitud_id}_${registro.estado}`;
+        if (!eventosProcesados.has(claveError)) {
+          eventosProcesados.add(claveError);
           cerrarEscucha();
 
-          const log = Array.isArray(registro.errores_log) ? registro.errores_log[0] : (registro.errores_log || {});
-          const motivo = log.motivo || 'Falta el esquema del entregable o datos obligatorios para ejecutar el especialista.';
-          const faltantes = Array.isArray(log.campos_faltantes) && log.campos_faltantes.length > 0
-            ? `
-- **Campos faltantes:** \`${log.campos_faltantes.join(', ')}\``
-            : '';
+          const log = Array.isArray(registro.errores_log) ? (registro.errores_log[0] || {}) : (registro.errores_log || {});
+          let mensajeAlerta;
+          if (registro.estado === 'error_especialista' || log.tipo === 'fallo_especialista') {
+            mensajeAlerta = `⚠️ **Falló la redacción del encargo** (\`${registro.solicitud_id}\`).
 
-          const mensajeAlerta = `⚠️ **Ejecución detenida por datos incompletos** (\`${registro.solicitud_id}\`).
+- **Motivo:** ${log.motivo || 'El especialista terminó con error. Revisa la ejecución en n8n.'}
+
+El encargo quedó detenido; puedes relanzarlo cuando se resuelva la causa.`;
+          } else {
+            const motivo = log.motivo || 'Falta el esquema del entregable o datos obligatorios para ejecutar el especialista.';
+            const faltantes = Array.isArray(log.campos_faltantes) && log.campos_faltantes.length > 0
+              ? `\n- **Campos faltantes:** \`${log.campos_faltantes.join(', ')}\``
+              : '';
+            mensajeAlerta = `⚠️ **Ejecución detenida por datos incompletos** (\`${registro.solicitud_id}\`).
 
 - **Motivo:** ${motivo}${faltantes}
 
 Verifica que la plantilla y su esquema estén cargados en Supabase antes de relanzar el encargo.`;
+          }
           appendMessage(mensajeAlerta, false);
           conversationHistory.push({ role: "assistant", content: mensajeAlerta });
           saveSessionState();
