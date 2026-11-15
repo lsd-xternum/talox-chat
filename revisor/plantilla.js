@@ -82,7 +82,7 @@
     h += '<div class="cmp"><label class="t">Extensión (palabras)</label><input type="number" min="0" data-ruta="' + ruta + '" data-k="extension" value="' + esc(ext) + '"></div>';
     h += '<div class="cmp"><label class="chk"><input type="checkbox" data-ruta="' + ruta + '" data-k="obligatorio"' + (c.obligatorio ? ' checked' : '') + '> Obligatorio</label><br><label class="chk"><input type="checkbox" data-ruta="' + ruta + '" data-k="investigar"' + (c.investigar ? ' checked' : '') + '> Requiere investigación externa</label></div>';
     h += '</div>';
-    h += '<div class="cmp"><label class="t">Se arma a partir de</label>' + chips(ruta, c) + '</div>';
+    h += '<div class="cmp"><label class="t">Se arma a partir de</label><div class="hint" style="margin:2px 0 6px;">Solo aplica si este campo se escribe resumiendo o combinando otros (ej: un resumen ejecutivo o un listado de fuentes). Marca de cuáles: TaloX redactará primero esos campos y luego armará este con lo ya escrito. Si el campo se redacta por sí solo, déjalo vacío.</div>' + chips(ruta, c) + '</div>';
     h += '<div class="fila">';
     h += '<div class="cmp"><label class="t">Metodología Xternum a consultar</label><input type="text" data-ruta="' + ruta + '" data-k="conocimiento.metodologia" value="' + esc(con.metodologia || '') + '" placeholder="ej: PEST"></div>';
     h += '<div class="cmp" style="grid-column: span 2;"><label class="t">Qué buscar en el conocimiento</label><input type="text" data-ruta="' + ruta + '" data-k="conocimiento.consulta" value="' + esc(con.consulta || '') + '" placeholder="ej: variables determinantes y escalas"></div>';
