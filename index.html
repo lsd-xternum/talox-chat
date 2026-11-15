@@ -805,8 +805,8 @@
               <div id="uiCliente" class="field-val">--</div>
             </div>
             <div>
-              <span class="field-lbl">Tipo de Servicio</span>
-              <div id="uiServicio" class="field-val">--</div>
+              <span class="field-lbl">Plantilla</span>
+              <div id="uiPlantilla" class="field-val">--</div>
             </div>
           </div>
 
@@ -908,7 +908,7 @@
       task_gid: "",
       asana_task_url: "",
       cliente_oficial: "",
-      servicio_codigo: "",
+      plantilla_codigo: "",
       mandato_operativo: {},
       solicitante: {},
       referencias: {},
@@ -1070,7 +1070,7 @@
                 payload.task_gid = item.task_gid || "";
                 payload.asana_task_url = item.asana_task_url || "";
                 payload.cliente_oficial = item.cliente_oficial || mo.cliente_oficial || "";
-                payload.servicio_codigo = item.servicio_codigo || "";
+                payload.plantilla_codigo = item.plantilla_codigo || "";
                 payload.mandato_operativo = typeof mo === "string" ? { tarea_titulo: mo } : mo;
                 payload.solicitante = item.solicitante || payload.solicitante || {};
                 payload.referencias = item.referencias || {};
@@ -1158,7 +1158,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
 
       conversationHistory = [];
       payload = {
-        solicitud_id: "", task_gid: "", asana_task_url: "", cliente_oficial: "", servicio_codigo: "",
+        solicitud_id: "", task_gid: "", asana_task_url: "", cliente_oficial: "", plantilla_codigo: "",
         mandato_operativo: {}, solicitante: payload.solicitante || {}, referencias: {},
         estado_encuadre: "en_definicion", bloqueadores: [], plan_agente: []
       };
@@ -1230,7 +1230,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
 
     function renderCanvas() {
       document.getElementById('uiCliente').innerText = payload.cliente_oficial || '--';
-      document.getElementById('uiServicio').innerText = payload.servicio_codigo || '--';
+      document.getElementById('uiPlantilla').innerText = payload.plantilla_codigo || 'Se define en el Triage';
       
       let mandatoUI = 'Esperando definiciones en el chat...';
       if (typeof payload.mandato_operativo === 'object' && payload.mandato_operativo !== null) {
@@ -1257,21 +1257,18 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
       }
 
      const esEncargoInterno = payload.cliente_oficial === 'XTERNUM INTERNO' ||
-  payload.servicio_codigo === 'mejora_arquitectura' ||
   (Array.isArray(payload.plan_agente) && payload.plan_agente.some(t => t.capacidad === 'arquitecto_talox'));
 
 if (esEncargoInterno) {
   if (!payload.cliente_oficial || payload.cliente_oficial === '--') payload.cliente_oficial = 'XTERNUM INTERNO';
-  if (!payload.servicio_codigo || payload.servicio_codigo === '--' || payload.servicio_codigo === 'en_definicion') payload.servicio_codigo = 'mejora_arquitectura';
 }
 
       const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
-      const tieneServicioValido = payload.servicio_codigo && payload.servicio_codigo !== 'en_definicion' && payload.servicio_codigo !== '--';
       const estaListoPorModelo = payload.estado_encuadre === 'listo_para_ejecutar';
       const sinBloqueadores = !payload.bloqueadores || payload.bloqueadores.length === 0;
       const tareasCompletas = payload.plan_agente && payload.plan_agente.length > 0 && payload.plan_agente.every(t => t.parametros_completos !== false);
 
-      const listoParaDespachar = tieneCliente && tieneServicioValido && estaListoPorModelo && sinBloqueadores && tareasCompletas;
+      const listoParaDespachar = tieneCliente && estaListoPorModelo && sinBloqueadores && tareasCompletas;
 
       const badge = document.getElementById('badgeEstado');
       const btnAprobar = document.getElementById('btnAprobar');
@@ -1446,7 +1443,6 @@ if (esEncargoInterno) {
             const parsedState = JSON.parse(stateMatch[1].trim());
             
             if (parsedState.cliente_oficial) payload.cliente_oficial = parsedState.cliente_oficial;
-            if (parsedState.servicio_codigo) payload.servicio_codigo = parsedState.servicio_codigo;
             if (parsedState.estado_encuadre) payload.estado_encuadre = parsedState.estado_encuadre;
             if (parsedState.bloqueadores) payload.bloqueadores = parsedState.bloqueadores;
             if (parsedState.plan_agente) payload.plan_agente = parsedState.plan_agente;
@@ -1497,8 +1493,6 @@ if (esEncargoInterno) {
       const reqId = payload.solicitud_id;
       const clienteActual = payload.cliente_oficial || 'Cliente';
       const esArquitecto = clienteActual === 'XTERNUM INTERNO' ||
-        payload.servicio_codigo === 'mejora_arquitectura' ||
-        payload.servicio_codigo === 'sintetico_a_medida' ||
         (Array.isArray(payload.plan_agente) && payload.plan_agente.some(t =>
           t.capacidad === 'arquitecto_talox' ||
           (t.nombre && t.nombre.toLowerCase().includes('arquitecto'))
@@ -1667,9 +1661,7 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
 
       const esArquitecto = Boolean(
         esArquitectoFlag ||
-        registro.cliente_oficial === 'XTERNUM INTERNO' ||
-        registro.servicio_codigo === 'mejora_arquitectura' ||
-        registro.servicio_codigo === 'sintetico_a_medida'
+        registro.cliente_oficial === 'XTERNUM INTERNO'
       );
 
       // 1. Notificaciones HITL 1 y HITL 2 (solo aplican a entregables de clientes, nunca al Arquitecto 14)
