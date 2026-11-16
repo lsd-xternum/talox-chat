@@ -3,8 +3,6 @@
   var C = D.contrato;
   var ES = {};
   D.estandares.forEach(function (e) { ES[e.codigo] = e; });
-  var ID_DOC = {};
-  D.idsDocumento.forEach(function (i) { ID_DOC[i] = true; });
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function $(id) { return document.getElementById(id); }
@@ -65,14 +63,12 @@
 
   function campoHtml(ruta, c, esBloque) {
     var validado = (c.validacion && c.validacion.estado) === 'validado';
-    var huerfano = !esBloque && D.hayDocumentoDeclarado && ruta.charAt(0) === 'c' && !ID_DOC[c.id];
     var ext = c.extension_palabras && c.extension_palabras.valor != null ? c.extension_palabras.valor : '';
     var crit = c.criterios ? JSON.stringify(c.criterios, null, 2) : '';
     var con = c.conocimiento || {};
-    var h = '<div class="campo-card' + (validado ? ' validado' : '') + (huerfano ? ' huerfano' : '') + '" data-card="' + ruta + '">';
+    var h = '<div class="campo-card' + (validado ? ' validado' : '') + '" data-card="' + ruta + '">';
     h += '<div class="campo-cab"><div><span class="etq">' + esc(c.etiqueta || c.id) + '</span><span class="id">' + esc(c.id) + '</span>';
-    if (huerfano) h += ' <span class="insignia" style="background:var(--error-fondo);color:var(--error);">ya no está en el documento</span>';
-    h += '</div><div>' + (huerfano ? '<button type="button" class="mini" data-quitar="' + ruta + '">Quitar del contrato</button> ' : '') + validadoHtml(ruta, c) + '</div></div>';
+    h += '</div><div>' + validadoHtml(ruta, c) + '</div></div>';
     h += '<div class="campo-cuerpo">';
     h += '<div class="ancla">' + esc(c.ancla || '') + '</div>';
     h += '<div class="cmp"><label class="t">Instrucción metodológica</label><textarea data-ruta="' + ruta + '" data-k="instruccion">' + esc(c.instruccion || '') + '</textarea></div>';
@@ -248,9 +244,7 @@
   }
   function alClick(ev) {
     var t = ev.target;
-    if (t.hasAttribute('data-quitar')) {
-      var p = t.getAttribute('data-quitar').split(':'); C.campos.splice(+p[1], 1); render();
-    } else if (t.hasAttribute('data-quitar-regla')) {
+    if (t.hasAttribute('data-quitar-regla')) {
       C.reglas_coherencia.splice(+t.getAttribute('data-quitar-regla'), 1); render();
     } else if (t.id === 'agregarRegla') {
       C.reglas_coherencia.push({ regla: '', validacion: '', campos: [] }); render();
@@ -297,11 +291,11 @@
       .catch(function (e) { alert('Error: ' + e.message); desbloquear(); });
   };
   window.solicitarReauditoria = function () {
-    var f = $('instruccionesAjuste') ? $('instruccionesAjuste').value.trim() : '';
-    bloquear('Enviando a re-auditoría...');
-    llamar('reauditar-plantilla', { file_id: D.file_id, instrucciones_ajuste: f })
-      .then(function () { confirmar('Re-auditoría Solicitada', 'Las instrucciones y el documento se enviaron para su re-evaluación técnica.', true); })
-      .catch(function (e) { alert('Error al solicitar re-auditoría: ' + e.message); desbloquear(); });
+    if (!confirm('Se vuelve a leer el documento desde Drive. Los cambios que no guardaste en esta página se pierden. ¿Continuar?')) return;
+    bloquear('Leyendo el documento...');
+    llamar('reauditar-plantilla', { file_id: D.file_id })
+      .then(function () { location.reload(); })
+      .catch(function (e) { alert('No se pudo leer el documento: ' + e.message); desbloquear(); });
   };
 
   document.addEventListener('change', alCambiar);
