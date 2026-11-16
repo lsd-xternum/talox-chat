@@ -13,6 +13,7 @@
     claves.forEach(function (k) { h += '<option value="' + esc(k) + '"' + (k === actual ? ' selected' : '') + '>' + esc(mapa[k] || k) + '</option>'; });
     return h;
   }
+  function ayuda(t) { return '<div class="hint ayuda-campo">' + t + '</div>'; }
   function hoy() { return new Date().toISOString(); }
   function quien() { var v = $('validadoPor'); return v ? v.value.trim() : ''; }
 
@@ -71,20 +72,19 @@
     h += '</div><div>' + validadoHtml(ruta, c) + '</div></div>';
     h += '<div class="campo-cuerpo">';
     h += '<div class="ancla">' + esc(c.ancla || '') + '</div>';
-    h += '<div class="cmp"><label class="t">Instrucción metodológica</label><textarea data-ruta="' + ruta + '" data-k="instruccion">' + esc(c.instruccion || '') + '</textarea></div>';
+    h += '<div class="cmp"><label class="t">Instrucción metodológica</label>' + ayuda('Es la consigna que recibe TaloX para redactar este campo. Escríbela como se la darías a un colega: qué debe incluir, con qué enfoque y qué evitar. Si el documento ya traía una pauta, aparece aquí; puedes ajustarla.') + '<textarea data-ruta="' + ruta + '" data-k="instruccion">' + esc(c.instruccion || '') + '</textarea></div>';
     h += '<div class="fila">';
-    h += '<div class="cmp"><label class="t">Origen de la información</label><select data-ruta="' + ruta + '" data-k="origen">' + opciones(D.origenes, c.origen) + '</select></div>';
-    h += '<div class="cmp"><label class="t">Formato</label><select data-ruta="' + ruta + '" data-k="formato">' + opciones(D.formatos, c.formato) + '</select></div>';
-    h += '<div class="cmp"><label class="t">Extensión (palabras)</label><input type="number" min="0" data-ruta="' + ruta + '" data-k="extension" value="' + esc(ext) + '"></div>';
-    h += '<div class="cmp"><label class="chk"><input type="checkbox" data-ruta="' + ruta + '" data-k="obligatorio"' + (c.obligatorio ? ' checked' : '') + '> Obligatorio</label><br><label class="chk"><input type="checkbox" data-ruta="' + ruta + '" data-k="investigar"' + (c.investigar ? ' checked' : '') + '> Requiere investigación externa</label></div>';
+    h += '<div class="cmp"><label class="t">Origen de la información</label>' + ayuda('De dónde sale el contenido. <b>Dato del encargo</b>: se copia tal cual de los datos del pedido (cliente, fecha, proyecto). <b>Redactado con evidencia</b>: TaloX lo escribe con información y fuentes. <b>Armado a partir de otros campos</b>: resume o combina otros (ej. un resumen ejecutivo).') + '<select data-ruta="' + ruta + '" data-k="origen">' + opciones(D.origenes, c.origen) + '</select></div>';
+    h += '<div class="cmp"><label class="t">Formato</label>' + ayuda('Cómo se presenta: <b>línea</b> (una sola línea), <b>fecha</b>, <b>prosa</b> (párrafos), <b>prosa con tabla</b> (texto y al final una tabla) o <b>lista</b>.') + '<select data-ruta="' + ruta + '" data-k="formato">' + opciones(D.formatos, c.formato) + '</select></div>';
+    h += '<div class="cmp"><label class="t">Extensión esperada (palabras)</label>' + ayuda('Cuántas palabras debería tener este campo, aproximadamente. Vacío: TaloX lo reparte según la extensión total del entregable.') + '<input type="number" min="0" data-ruta="' + ruta + '" data-k="extension" value="' + esc(ext) + '"></div>';
+    h += '<div class="cmp"><label class="chk" title="Si está marcado, el entregable no se considera completo sin este campo."><input type="checkbox" data-ruta="' + ruta + '" data-k="obligatorio"' + (c.obligatorio ? ' checked' : '') + '> Obligatorio</label><br><label class="chk" title="Marca si TaloX debe buscar información en fuentes externas (web) para redactar este campo."><input type="checkbox" data-ruta="' + ruta + '" data-k="investigar"' + (c.investigar ? ' checked' : '') + '> Requiere investigación externa</label></div>';
     h += '</div>';
     h += '<div class="cmp"><label class="t">Se arma a partir de</label><div class="hint" style="margin:2px 0 6px;">Solo aplica si este campo se escribe resumiendo o combinando otros (ej: un resumen ejecutivo o un listado de fuentes). Marca de cuáles: TaloX redactará primero esos campos y luego armará este con lo ya escrito. Si el campo se redacta por sí solo, déjalo vacío.</div>' + chips(ruta, c) + '</div>';
     h += '<div class="fila">';
-    h += '<div class="cmp"><label class="t">Metodología Xternum a consultar</label><input type="text" data-ruta="' + ruta + '" data-k="conocimiento.metodologia" value="' + esc(con.metodologia || '') + '" placeholder="ej: PEST"></div>';
-    h += '<div class="cmp" style="grid-column: span 2;"><label class="t">Qué buscar en el conocimiento</label><input type="text" data-ruta="' + ruta + '" data-k="conocimiento.consulta" value="' + esc(con.consulta || '') + '" placeholder="ej: variables determinantes y escalas"></div>';
+    h += '<div class="cmp"><label class="t">Metodología Xternum a consultar</label>' + ayuda('Nombre del modelo o método de Xternum que TaloX debe consultar para este campo.') + '<input type="text" data-ruta="' + ruta + '" data-k="conocimiento.metodologia" value="' + esc(con.metodologia || '') + '" placeholder="ej: PEST"></div>';
+    h += '<div class="cmp" style="grid-column: span 2;"><label class="t">Qué buscar en el conocimiento</label>' + ayuda('Qué parte de esa metodología le sirve a este campo (opcional).') + '<input type="text" data-ruta="' + ruta + '" data-k="conocimiento.consulta" value="' + esc(con.consulta || '') + '" placeholder="ej: variables determinantes y escalas"></div>';
     h += '</div>';
-    h += '<div class="cmp"><label class="t">Criterios de auditoría que aplican a este campo</label>' + criteriosChips(ruta, c) + '</div>';
-    h += '<details><summary class="hint" style="cursor:pointer;">Criterios específicos del campo (avanzado, JSON)</summary><div class="cmp"><textarea data-ruta="' + ruta + '" data-k="criterios" placeholder="{}">' + esc(crit) + '</textarea></div></details>';
+    h += '<div class="cmp"><label class="t">Criterios de auditoría que aplican a este campo</label>' + ayuda('Con qué principios de calidad revisará el auditor este campo. Pasa el cursor sobre cada uno para ver su definición.') + criteriosChips(ruta, c) + '</div>';
     h += '</div></div>';
     return h;
   }
@@ -92,10 +92,15 @@
   function globalHtml() {
     var pf = C.perfil_flujo || {};
     var h = '<div class="global-grid">';
-    h += '<div class="cmp"><label class="t">' + esc(pf.pregunta || 'Perfil de flujo') + '</label><input type="text" list="perfiles" data-g="perfil_flujo.valor" value="' + esc(pf.valor || '') + '" placeholder="ej: investigar_y_redactar"><datalist id="perfiles"><option value="investigar_y_redactar"></datalist></div>';
-    h += '<div class="cmp"><label class="t">Objetivo total (palabras)</label><input type="number" min="0" data-g="objetivo_palabras.valor" value="' + esc(C.objetivo_palabras && C.objetivo_palabras.valor != null ? C.objetivo_palabras.valor : '') + '"></div>';
+    var PERFILES = {
+      investigar_y_redactar: 'Investigar y redactar: TaloX busca información externa y la combina con el conocimiento de Xternum',
+      redactar_con_insumos: 'Redactar con los insumos del encargo: sin búsqueda externa, con lo que aportan el consultor y el cliente',
+      estructurar_fuente: 'Estructurar una fuente existente: ordena un material ya disponible (ej. una entrevista) sin agregar nada'
+    };
+    h += '<div class="cmp"><label class="t">' + esc(pf.pregunta || '¿De dónde sale la información de este entregable?') + '</label>' + ayuda('Define cómo se produce el entregable completo. Es la decisión más importante de la plantilla: determina si TaloX investiga fuera, trabaja con lo que aportan ustedes o solo ordena un material existente.') + '<select data-g="perfil_flujo.valor">' + opciones(PERFILES, pf.valor || '') + '</select></div>';
+    h += '<div class="cmp"><label class="t">Extensión esperada del entregable (palabras)</label>' + ayuda('Cuántas palabras debería tener el documento completo, aproximadamente. TaloX la reparte entre los campos.') + '<input type="number" min="0" data-g="objetivo_palabras.valor" value="' + esc(C.objetivo_palabras && C.objetivo_palabras.valor != null ? C.objetivo_palabras.valor : '') + '"></div>';
     h += '</div>';
-    h += '<div class="cmp" style="margin-top:14px;"><label class="t">Criterios de auditoría del entregable</label>';
+    h += '<div class="cmp" style="margin-top:14px;"><label class="t">Criterios de auditoría del entregable</label>' + ayuda('Principios de calidad con que se revisa el documento completo. Marca “no negociable” los que, si no se cumplen, impiden aprobarlo.');
     D.estandares.forEach(function (e, i) {
       var ap = (C.criterios_auditoria.aplican || []).filter(function (a) { return a.codigo === e.codigo; })[0];
       h += '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:4px 0;"><label class="chk" title="' + esc(e.definicion) + '"><input type="checkbox" data-gcrit="' + esc(e.codigo) + '"' + (ap ? ' checked' : '') + '> ' + esc(e.principio) + '</label>';
@@ -108,9 +113,9 @@
   function reglasHtml() {
     var h = '<div class="reglas">';
     (C.reglas_coherencia || []).forEach(function (r, i) {
-      h += '<div class="regla"><div class="cmp"><label class="t">Regla de coherencia entre campos</label><textarea data-regla="' + i + '" data-rk="regla">' + esc(r.regla || '') + '</textarea></div>';
-      h += '<div class="fila"><div class="cmp"><label class="t">Cómo se verifica</label><input type="text" data-regla="' + i + '" data-rk="validacion" value="' + esc(r.validacion || '') + '"></div>';
-      h += '<div class="cmp"><label class="t">Campos involucrados (ids separados por coma)</label><input type="text" data-regla="' + i + '" data-rk="campos" value="' + esc((r.campos || []).join(', ')) + '"></div>';
+      h += '<div class="regla"><div class="cmp"><label class="t">Regla de coherencia entre campos</label>' + ayuda('Una condición que debe cumplirse entre varios campos a la vez. Ej: «PEST y Porter deben ser complementarios, no redundantes».') + '<textarea data-regla="' + i + '" data-rk="regla">' + esc(r.regla || '') + '</textarea></div>';
+      h += '<div class="fila"><div class="cmp"><label class="t">Cómo se verifica</label>' + ayuda('Cómo comprobará el auditor que se cumple.') + '<input type="text" data-regla="' + i + '" data-rk="validacion" value="' + esc(r.validacion || '') + '"></div>';
+      h += '<div class="cmp"><label class="t">Campos involucrados</label>' + ayuda('Códigos de los campos que intervienen, separados por coma (se ven en gris junto al nombre de cada campo).') + '<input type="text" data-regla="' + i + '" data-rk="campos" value="' + esc((r.campos || []).join(', ')) + '"></div>';
       h += '<div><button type="button" class="mini" data-quitar-regla="' + i + '">Quitar regla</button></div></div></div>';
     });
     h += '</div><p><button type="button" class="boton-iterar" id="agregarRegla">+ Agregar regla</button></p>';

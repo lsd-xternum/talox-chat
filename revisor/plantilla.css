@@ -117,3 +117,5 @@ table.doc-table th { background-color: #F7F8F6; color: var(--negro); font-family
 .quien input { font: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid var(--borde); border-radius: 8px; width: 240px; }
 .bloque-card { border: 1.5px solid var(--borde); border-radius: 12px; margin-top: 18px; background: #FBFCFA; padding: 4px 16px 16px; }
 .reglas .regla { border: 1px solid var(--borde); border-radius: 8px; padding: 10px 12px; margin-top: 10px; display: grid; gap: 8px; background: #fff; }
+.cmp .ayuda-campo { margin: 0 0 6px; line-height: 1.4; }
+.cmp .ayuda-campo b { color: var(--texto); }
