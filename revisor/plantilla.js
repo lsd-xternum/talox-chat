@@ -21,6 +21,7 @@
   function obtener(ruta) {
     var p = ruta.split(':');
     if (p[0] === 'c') return C.campos[+p[1]];
+    if (p[0] === 't') return C.tablas[+p[1]];
     if (p.length === 2) return C.bloques[+p[1]];
     return C.bloques[+p[1]].campos[+p[2]];
   }
@@ -35,6 +36,12 @@
     for (var i = 0; i < p.length - 1; i++) { if (cur[p[i]] == null || typeof cur[p[i]] !== 'object') cur[p[i]] = {}; cur = cur[p[i]]; }
     cur[p[p.length - 1]] = v;
   }
+
+  function sugeridoHtml(c) {
+    return (c.validacion && c.validacion.estado) === 'sugerido' ? '<span class="id sugerido" title="TaloX propuso estos valores a partir de la pauta del documento; revísalos antes de validar.">sugerido por TaloX</span>' : '';
+  }
+  function pendienteGlobal(k) { var o = C[k]; return !!(o && o.origen === 'sugerida'); }
+  function globalesPendientes() { return ['perfil_flujo', 'objetivo_palabras', 'criterios_auditoria'].filter(pendienteGlobal); }
 
   function chips(ruta, c) {
     var h = '<div class="chips">';
@@ -68,7 +75,7 @@
     var crit = c.criterios ? JSON.stringify(c.criterios, null, 2) : '';
     var con = c.conocimiento || {};
     var h = '<div class="campo-card' + (validado ? ' validado' : '') + '" data-card="' + ruta + '">';
-    h += '<div class="campo-cab"><div><span class="etq">' + esc(c.etiqueta || c.id) + '</span><span class="id">' + esc(c.id) + '</span>';
+    h += '<div class="campo-cab"><div><span class="etq">' + esc(c.etiqueta || c.id) + '</span><span class="id">' + esc(c.id) + '</span>' + sugeridoHtml(c);
     h += '</div><div>' + validadoHtml(ruta, c) + '</div></div>';
     h += '<div class="campo-cuerpo">';
     h += '<div class="ancla">' + esc(c.ancla || '') + '</div>';
@@ -89,9 +96,27 @@
     return h;
   }
 
+  function tablaHtml(ruta, t) {
+    var validado = (t.validacion && t.validacion.estado) === 'validado';
+    var cols = (t.columnas || []).map(function (k) { return esc(k.nombre); }).join(' · ');
+    var h = '<div class="campo-card' + (validado ? ' validado' : '') + '" data-card="' + ruta + '">';
+    h += '<div class="campo-cab"><div><span class="etq">Tabla: ' + esc(t.etiqueta || t.id) + '</span><span class="id">' + esc(t.id) + '</span>' + sugeridoHtml(t) + '</div><div>' + validadoHtml(ruta, t) + '</div></div>';
+    h += '<div class="campo-cuerpo"><div class="ancla">' + esc(t.ancla || '') + '</div>';
+    h += '<div class="cmp"><label class="t">Columnas</label><div class="hint">' + (cols || '(sin columnas detectadas)') + '</div></div>';
+    h += '<div class="cmp"><label class="t">Instrucción de la tabla</label>' + ayuda('Consigna que recibe TaloX para completar esta tabla: qué filas incluir, qué debe ir en cada columna y qué evitar.') + '<textarea data-ruta="' + ruta + '" data-k="instruccion">' + esc(t.instruccion || '') + '</textarea></div>';
+    h += '<div class="cmp"><label class="chk"><input type="checkbox" data-ruta="' + ruta + '" data-k="obligatorio"' + (t.obligatorio ? ' checked' : '') + '> Obligatoria</label></div>';
+    return h + '</div></div>';
+  }
+
+  function avisoGlobalHtml() {
+    var p = globalesPendientes();
+    if (!p.length) return '';
+    return '<div class="aviso-caja"><h4>TaloX propuso estos datos generales</h4><p style="margin:0 0 8px;font-size:13.5px;">Revísalos (puedes cambiarlos) y confírmalos para poder aprobar la plantilla.</p><button type="button" class="boton-iterar" id="confirmarGlobales">✓ Confirmar datos generales propuestos por TaloX</button></div>';
+  }
+
   function globalHtml() {
     var pf = C.perfil_flujo || {};
-    var h = '<div class="global-grid">';
+    var h = avisoGlobalHtml() + '<div class="global-grid">';
     var PERFILES = {
       investigar_y_redactar: 'Investigar y redactar: TaloX busca información externa y la combina con el conocimiento de Xternum',
       redactar_con_insumos: 'Redactar con los insumos del encargo: sin búsqueda externa, con lo que aportan el consultor y el cliente',
@@ -134,10 +159,23 @@
       (b.campos || []).forEach(function (c, ci) { hb += campoHtml('b:' + bi + ':' + ci, c, true); });
       hb += '</div>';
     });
-    $('listaBloques').innerHTML = hb || '<p class="hint">Esta plantilla no tiene bloques dinámicos.</p>';
+    (C.tablas || []).forEach(function (t, ti) { hb += tablaHtml('t:' + ti, t); });
+    $('listaBloques').innerHTML = hb || '<p class="hint">Esta plantilla no tiene bloques dinámicos ni tablas.</p>';
+    avisosEditor();
     $('contGlobal').innerHTML = globalHtml();
     $('contReglas').innerHTML = reglasHtml();
     actualizarProgreso();
+  }
+
+  function avisosEditor() {
+    var a = [];
+    if (!D.workflow_id) a.push('Esta plantilla no tiene un especialista (flujo) asignado: aunque se apruebe, ningún agente la usará todavía.');
+    var sg = C.plantilla && C.plantilla.sugerencia;
+    if (sg && sg.estado && sg.estado !== 'ok') a.push('La sugerencia automática de TaloX quedó ' + esc(sg.estado) + (sg.motivo ? ' (' + esc(sg.motivo) + ')' : '') + ': lo que falta aparece sin definir.');
+    var pend = todos().filter(function (x) { return x.o.validacion && x.o.validacion.estado === 'sugerido'; }).length;
+    if (pend) a.push(pend + ' elemento(s) fueron sugeridos por TaloX y esperan tu revisión. Usa “Mostrar solo lo pendiente” para ir directo a ellos.');
+    var el = $('avisosEditor');
+    if (el) el.innerHTML = a.length ? '<div class="aviso-caja">' + a.map(function (x) { return '<div>' + x + '</div>'; }).join('') + '</div>' : '';
   }
 
   // ---- estado de validación
@@ -148,6 +186,7 @@
       l.push({ ruta: 'b:' + bi, o: b, campo: false });
       (b.campos || []).forEach(function (c, ci) { l.push({ ruta: 'b:' + bi + ':' + ci, o: c, campo: true }); });
     });
+    (C.tablas || []).forEach(function (t, ti) { l.push({ ruta: 't:' + ti, o: t, campo: false }); });
     return l;
   }
   function completo(x) { return !x.campo || (x.o.origen && x.o.formato); }
@@ -156,18 +195,20 @@
     var val = l.filter(function (x) { return x.o.validacion && x.o.validacion.estado === 'validado'; }).length;
     var faltaDef = l.filter(function (x) { return !completo(x); }).length;
     var perfil = C.perfil_flujo && C.perfil_flujo.valor;
-    return { total: l.length, validados: val, faltaDef: faltaDef, perfil: !!perfil, listo: l.length > 0 && val === l.length && faltaDef === 0 && !!perfil };
+    var gp = globalesPendientes().length;
+    return { total: l.length, validados: val, faltaDef: faltaDef, perfil: !!perfil, globales: gp, listo: l.length > 0 && val === l.length && faltaDef === 0 && !!perfil && gp === 0 };
   }
   function actualizarProgreso() {
     var e = estado();
     var p = $('progreso');
     var txt = e.validados + ' de ' + e.total + ' elementos validados';
     if (!e.perfil) txt += ' · falta el perfil de flujo';
+    if (e.globales) txt += ' · faltan confirmar datos generales';
     if (e.faltaDef) txt += ' · ' + e.faltaDef + ' sin origen o formato';
     p.textContent = txt;
     p.className = 'progreso' + (e.listo ? ' ok' : '');
     var b = $('btnAprobar');
-    if (b) { b.disabled = !e.listo; b.title = e.listo ? '' : 'Valida todos los campos y define origen, formato y perfil de flujo'; }
+    if (b) { b.disabled = !e.listo; b.title = e.listo ? '' : 'Valida todos los elementos, define origen, formato y perfil de flujo y confirma los datos generales propuestos'; }
   }
   function invalidar(o) {
     if (o.validacion && o.validacion.estado === 'validado') { o.validacion = { estado: 'editado', validado_por: null, validado_el: null }; return true; }
@@ -249,6 +290,10 @@
   }
   function alClick(ev) {
     var t = ev.target;
+    if (t.id === 'confirmarGlobales') {
+      globalesPendientes().forEach(function (k) { C[k].origen = 'validada'; });
+      render(); return;
+    }
     if (t.hasAttribute('data-quitar-regla')) {
       C.reglas_coherencia.splice(+t.getAttribute('data-quitar-regla'), 1); render();
     } else if (t.id === 'agregarRegla') {
@@ -274,7 +319,8 @@
   }
   function guardar() {
     if (!quien()) { alert('Escribe tu nombre en el pie de la página.'); return Promise.reject(new Error('sin nombre')); }
-    return llamar('guardar-contrato', { file_id: D.file_id, contrato: C, validado_por: quien() });
+    return llamar('guardar-contrato', { file_id: D.file_id, contrato: C, validado_por: quien(), cargado_el: D.actualizado_el || null })
+      .then(function (j) { if (j.actualizado_el) D.actualizado_el = j.actualizado_el; return j; });
   }
 
   window.guardarContrato = function () {
@@ -303,6 +349,9 @@
       .catch(function (e) { alert('No se pudo procesar de nuevo el documento: ' + e.message); desbloquear(); });
   };
 
+  document.addEventListener('change', function (ev) {
+    if (ev.target.id === 'soloPendiente') document.body.classList.toggle('solo-pendiente', ev.target.checked);
+  });
   document.addEventListener('change', alCambiar);
   document.addEventListener('click', alClick);
   try { var g = localStorage.getItem('talox_revisor'); if (g) $('validadoPor').value = g; } catch (e) {}
