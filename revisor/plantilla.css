@@ -119,3 +119,8 @@ table.doc-table th { background-color: #F7F8F6; color: var(--negro); font-family
 .reglas .regla { border: 1px solid var(--borde); border-radius: 8px; padding: 10px 12px; margin-top: 10px; display: grid; gap: 8px; background: #fff; }
 .cmp .ayuda-campo { margin: 0 0 6px; line-height: 1.4; }
 .cmp .ayuda-campo b { color: var(--texto); }
+
+/* Mejoras del editor: marca de sugerido y filtro de pendientes */
+.id.sugerido { background: #FFF4D6; color: #7A5A00; border-radius: 10px; padding: 1px 8px; margin-left: 8px; font-size: 11.5px; }
+body.solo-pendiente .campo-card.validado { display: none; }
+.filtro-pendiente { margin: 0 0 14px; font-size: 13.5px; }
