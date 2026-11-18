@@ -13,6 +13,11 @@
     claves.forEach(function (k) { h += '<option value="' + esc(k) + '"' + (k === actual ? ' selected' : '') + '>' + esc(mapa[k] || k) + '</option>'; });
     return h;
   }
+  var V = D.vocabulario || { origen: [], formato: [], perfil_flujo: [] };
+  function mapaVoc(tipo) { var m = {}; (V[tipo] || []).forEach(function (v) { m[v.codigo] = v.etiqueta; }); return m; }
+  function descVoc(tipo) { return (V[tipo] || []).map(function (v) { return '<b>' + esc(v.etiqueta) + '</b>: ' + esc(v.descripcion || ''); }).join(' '); }
+  function etiquetaVoc(tipo, cod) { var r = (V[tipo] || []).filter(function (v) { return v.codigo === cod; })[0]; return r ? r : null; }
+  var origenAbierto = {};
   function ayuda(t) { return '<div class="hint ayuda-campo">' + t + '</div>'; }
   function hoy() { return new Date().toISOString(); }
   function quien() { var v = $('validadoPor'); return v ? v.value.trim() : ''; }
@@ -81,8 +86,13 @@
     h += '<div class="ancla">' + esc(c.ancla || '') + '</div>';
     h += '<div class="cmp"><label class="t">Instrucción metodológica</label>' + ayuda('Es la consigna que recibe TaloX para redactar este campo. Escríbela como se la darías a un colega: qué debe incluir, con qué enfoque y qué evitar. Si el documento ya traía una pauta, aparece aquí; puedes ajustarla.') + '<textarea data-ruta="' + ruta + '" data-k="instruccion">' + esc(c.instruccion || '') + '</textarea></div>';
     h += '<div class="fila">';
-    h += '<div class="cmp"><label class="t">Origen de la información</label>' + ayuda('De dónde sale el contenido. <b>Dato del encargo</b>: se copia tal cual de los datos del pedido (cliente, fecha, proyecto). <b>Redactado con evidencia</b>: TaloX lo escribe con información y fuentes. <b>Armado a partir de otros campos</b>: resume o combina otros (ej. un resumen ejecutivo).') + '<select data-ruta="' + ruta + '" data-k="origen">' + opciones(D.origenes, c.origen) + '</select></div>';
-    h += '<div class="cmp"><label class="t">Formato</label>' + ayuda('Cómo se presenta: <b>línea</b> (una sola línea), <b>fecha</b>, <b>prosa</b> (párrafos), <b>prosa con tabla</b> (texto y al final una tabla) o <b>lista</b>.') + '<select data-ruta="' + ruta + '" data-k="formato">' + opciones(D.formatos, c.formato) + '</select></div>';
+    var ov = etiquetaVoc('origen', c.origen);
+    if (!ov || origenAbierto[ruta]) {
+      h += '<div class="cmp"><label class="t">Origen de la información</label>' + ayuda(descVoc('origen')) + '<select data-ruta="' + ruta + '" data-k="origen">' + opciones(mapaVoc('origen'), c.origen) + '</select></div>';
+    } else {
+      h += '<div class="cmp"><label class="t">Origen de la información</label><div><b>' + esc(ov.etiqueta) + '</b> <button type="button" class="mini" data-corregir-origen="' + ruta + '">Corregir</button></div>' + ayuda(esc(ov.descripcion || '') + ' Lo propone TaloX a partir del documento; corrígelo solo si no corresponde.') + '</div>';
+    }
+    h += '<div class="cmp"><label class="t">Formato</label>' + ayuda(descVoc('formato')) + '<select data-ruta="' + ruta + '" data-k="formato">' + opciones(mapaVoc('formato'), c.formato) + '</select></div>';
     h += '<div class="cmp"><label class="t">Extensión esperada (palabras)</label>' + ayuda('Cuántas palabras debería tener este campo, aproximadamente. Vacío: TaloX lo reparte según la extensión total del entregable.') + '<input type="number" min="0" data-ruta="' + ruta + '" data-k="extension" value="' + esc(ext) + '"></div>';
     h += '<div class="cmp"><label class="chk" title="Si está marcado, el entregable no se considera completo sin este campo."><input type="checkbox" data-ruta="' + ruta + '" data-k="obligatorio"' + (c.obligatorio ? ' checked' : '') + '> Obligatorio</label><br><label class="chk" title="Marca si TaloX debe buscar información en fuentes externas (web) para redactar este campo."><input type="checkbox" data-ruta="' + ruta + '" data-k="investigar"' + (c.investigar ? ' checked' : '') + '> Requiere investigación externa</label></div>';
     h += '</div>';
@@ -117,11 +127,7 @@
   function globalHtml() {
     var pf = C.perfil_flujo || {};
     var h = avisoGlobalHtml() + '<div class="global-grid">';
-    var PERFILES = {
-      investigar_y_redactar: 'Investigar y redactar: TaloX busca información externa y la combina con el conocimiento de Xternum',
-      redactar_con_insumos: 'Redactar con los insumos del encargo: sin búsqueda externa, con lo que aportan el consultor y el cliente',
-      estructurar_fuente: 'Estructurar una fuente existente: ordena un material ya disponible (ej. una entrevista) sin agregar nada'
-    };
+    var PERFILES = mapaVoc('perfil_flujo');
     h += '<div class="cmp"><label class="t">' + esc(pf.pregunta || '¿De dónde sale la información de este entregable?') + '</label>' + ayuda('Define cómo se produce el entregable completo. Es la decisión más importante de la plantilla: determina si TaloX investiga fuera, trabaja con lo que aportan ustedes o solo ordena un material existente.') + '<select data-g="perfil_flujo.valor">' + opciones(PERFILES, pf.valor || '') + '</select></div>';
     h += '<div class="cmp"><label class="t">Extensión esperada del entregable (palabras)</label>' + ayuda('Cuántas palabras debería tener el documento completo, aproximadamente. TaloX la reparte entre los campos.') + '<input type="number" min="0" data-g="objetivo_palabras.valor" value="' + esc(C.objetivo_palabras && C.objetivo_palabras.valor != null ? C.objetivo_palabras.valor : '') + '"></div>';
     h += '</div>';
@@ -290,6 +296,7 @@
   }
   function alClick(ev) {
     var t = ev.target;
+    if (t.hasAttribute('data-corregir-origen')) { origenAbierto[t.getAttribute('data-corregir-origen')] = true; render(); return; }
     if (t.id === 'confirmarGlobales') {
       globalesPendientes().forEach(function (k) { C[k].origen = 'validada'; });
       render(); return;
