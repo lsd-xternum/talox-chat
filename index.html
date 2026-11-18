@@ -892,10 +892,7 @@
       <circle cx="60" cy="51" r="0.8" fill="#ffffff" />
     </svg>`;
 
-    let dbCatalogo = [];
-    let dbFlujos = [];
-    let dbDirectivas = [];
-    let dbClientes = [];
+    let resumen = { servicios: 0, estandares: 0, flujos: 0, clientes: 0 };
     let currentUserSession = null;
     
     // GESTIÓN DE MEMORIA PARA LISTENERS ACTIVOS
@@ -1173,7 +1170,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
             ${TALOX_AVATAR_SVG}
           </div>
           <div id="welcomeBubble" class="bubble talox">
-            Hola! Sesión reiniciada con conocimiento vivo de ${dbFlujos.length} flujos en n8n y ${dbCatalogo.length} servicios oficiales. Listo para encuadrar: ¿qué cliente y qué encargo tenemos hoy?
+            Hola! Sesión reiniciada con conocimiento vivo de ${resumen.flujos || 0} flujos en n8n y ${resumen.servicios || 0} servicios oficiales. Listo para encuadrar: ¿qué cliente y qué encargo tenemos hoy?
           </div>
         </div>
       `;
@@ -1191,33 +1188,18 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
 
       try {
         const headers = { "apikey": key, "Authorization": `Bearer ${key}` };
-        const resCat = await fetch(`${url}/rest/v1/plantillas?select=codigo,nombre,area_codigo&activo=eq.true&estado=eq.aprobado`, { headers });
-        if (resCat.ok) dbCatalogo = await resCat.json();
-
-        const resFlujos = await fetch(`${url}/rest/v1/flujos_n8n_activos?select=*`, { headers });
-        if (resFlujos.ok) dbFlujos = await resFlujos.json();
-
-        try {
-          const resDir = await fetch(`${url}/rest/v1/estandares_calidad?select=*`, { headers });
-          if (resDir.ok) dbDirectivas = await resDir.json();
-        } catch (_) {}
-
-        try {
-          const resCli = await fetch(`${url}/rest/v1/clientes_carpetas?select=*`, { headers });
-          if (!resCli.ok) throw new Error(`HTTP ${resCli.status} al leer clientes_carpetas`);
-          dbClientes = await resCli.json();
-        } catch (errCli) {
-          console.error("Error sincronizando clientes:", errCli);
-          dbClientes = [];
-        }
+        // Conteos vía RPC (SECURITY DEFINER, solo devuelve cifras): no depende de leer las tablas con la clave anon.
+        const resRes = await fetch(`${url}/rest/v1/rpc/talox_resumen`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
+        if (!resRes.ok) throw new Error(`HTTP ${resRes.status} al leer talox_resumen`);
+        resumen = await resRes.json();
 
         statusPill.className = "status-pill online";
-        const totalServ = dbCatalogo.length || 0;
-        const totalEst = dbDirectivas.length || 0;
-        statusPill.innerHTML = `🟢 ${dbFlujos.length} flujos &middot; ${totalServ} servicios &middot; ${totalEst} estándares &middot; ${dbClientes.length} clientes &middot; En línea`;
+        const totalServ = resumen.servicios || 0;
+        const totalEst = resumen.estandares || 0;
+        statusPill.innerHTML = `🟢 ${resumen.flujos || 0} flujos &middot; ${totalServ} servicios &middot; ${totalEst} estándares &middot; ${resumen.clientes || 0} clientes &middot; En línea`;
 
         if (welcome && conversationHistory.length === 0) {
-          welcome.innerHTML = `Hola. Sistema operativo enlazado con <strong>${totalServ} servicios de catálogo</strong> y <strong>${dbFlujos.length} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
+          welcome.innerHTML = `Hola. Sistema operativo enlazado con <strong>${totalServ} servicios de catálogo</strong> y <strong>${resumen.flujos || 0} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
         }
       } catch (err) {
         statusPill.className = "status-pill offline";
