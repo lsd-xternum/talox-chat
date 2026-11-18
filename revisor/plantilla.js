@@ -296,11 +296,11 @@
       .catch(function (e) { alert('Error: ' + e.message); desbloquear(); });
   };
   window.solicitarReauditoria = function () {
-    if (!confirm('Se vuelve a leer el documento desde Drive. Los cambios que no guardaste en esta página se pierden. ¿Continuar?')) return;
-    bloquear('Leyendo el documento...');
+    if (!confirm('TaloX va a leer de nuevo el documento en Drive y a procesarlo otra vez: conserva lo que ya validaste y no cambió, y propone lo nuevo. Los cambios que no guardaste en esta página se pierden. ¿Continuar?')) return;
+    bloquear('TaloX está procesando de nuevo el documento (puede tardar un minuto)...');
     llamar('reauditar-plantilla', { file_id: D.file_id })
       .then(function () { location.reload(); })
-      .catch(function (e) { alert('No se pudo leer el documento: ' + e.message); desbloquear(); });
+      .catch(function (e) { alert('No se pudo procesar de nuevo el documento: ' + e.message); desbloquear(); });
   };
 
   document.addEventListener('change', alCambiar);
