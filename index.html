@@ -805,7 +805,7 @@
               <div id="uiCliente" class="field-val">--</div>
             </div>
             <div>
-              <span class="field-lbl">Plantilla</span>
+              <span class="field-lbl">Producto</span>
               <div id="uiPlantilla" class="field-val">--</div>
             </div>
           </div>
@@ -830,13 +830,13 @@
 
         <div class="card">
           <div class="card-header">
-            <h3>Plan de Tareas Agénticas</h3>
-            <span id="uiCount" class="insignia insignia-verde">0 tareas</span>
+            <h3>Entregables previstos</h3>
+            <span id="uiCount" class="insignia insignia-verde">0 entregables</span>
           </div>
 
           <div id="uiPipeline">
             <div style="font-size: 13px; color: var(--xt-texto-muted); text-align: center; padding: 18px 0; font-style: italic;">
-              El plan de tareas se compondrá según el análisis del encargo.
+              Los entregables aparecerán cuando TaloX identifique el producto del encargo.
             </div>
           </div>
         </div>
@@ -906,6 +906,9 @@
       asana_task_url: "",
       cliente_oficial: "",
       plantilla_codigo: "",
+      producto_codigo: "",
+      producto_nombre: "",
+      plantillas_propuestas: [],
       mandato_operativo: {},
       solicitante: {},
       referencias: {},
@@ -1074,6 +1077,9 @@
                 payload.estado_encuadre = "en_definicion";
                 payload.bloqueadores = [];
                 payload.plan_agente = [];
+                payload.producto_codigo = "";
+                payload.producto_nombre = "";
+                payload.plantillas_propuestas = [];
 
                 renderCanvas();
 
@@ -1144,6 +1150,11 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
           if (t && t.id) activarEscuchaEnSegundoPlano(t.id, t.cliente || "Cliente", Boolean(t.esArquitecto));
         });
       } catch (_) {}
+      try {
+        JSON.parse(localStorage.getItem('talox_pedidos_activos') || '[]')
+          .filter(p => p && p.id && (!p.inicio || Date.now() - p.inicio < TTL_PEDIDO_MS))
+          .forEach(p => activarEscuchaPedido(p.id, p.cliente, p.url, p.inicio));
+      } catch (_) {}
     }
 
     function nuevaSesion() {
@@ -1156,6 +1167,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
       conversationHistory = [];
       payload = {
         solicitud_id: "", task_gid: "", asana_task_url: "", cliente_oficial: "", plantilla_codigo: "",
+        producto_codigo: "", producto_nombre: "", plantillas_propuestas: [],
         mandato_operativo: {}, solicitante: payload.solicitante || {}, referencias: {},
         estado_encuadre: "en_definicion", bloqueadores: [], plan_agente: []
       };
@@ -1212,7 +1224,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
 
     function renderCanvas() {
       document.getElementById('uiCliente').innerText = payload.cliente_oficial || '--';
-      document.getElementById('uiPlantilla').innerText = payload.plantilla_codigo || 'Se define en el Triage';
+      document.getElementById('uiPlantilla').innerText = payload.producto_nombre || payload.producto_codigo || payload.plantilla_codigo || 'Se define en el chat';
       
       let mandatoUI = 'Esperando definiciones en el chat...';
       if (typeof payload.mandato_operativo === 'object' && payload.mandato_operativo !== null) {
@@ -1248,7 +1260,7 @@ if (esEncargoInterno) {
       const tieneCliente = payload.cliente_oficial && payload.cliente_oficial !== '--' && payload.cliente_oficial.trim() !== '';
       const estaListoPorModelo = payload.estado_encuadre === 'listo_para_ejecutar';
       const sinBloqueadores = !payload.bloqueadores || payload.bloqueadores.length === 0;
-      const tareasCompletas = payload.plan_agente && payload.plan_agente.length > 0 && payload.plan_agente.every(t => t.parametros_completos !== false);
+      const tareasCompletas = (payload.plan_agente && payload.plan_agente.length > 0 && payload.plan_agente.every(t => t.parametros_completos !== false)) || Boolean(payload.producto_codigo);
 
       const listoParaDespachar = tieneCliente && estaListoPorModelo && sinBloqueadores && tareasCompletas;
 
@@ -1275,20 +1287,36 @@ if (esEncargoInterno) {
       }
 
       const divPipe = document.getElementById('uiPipeline');
-      if (payload.plan_agente && payload.plan_agente.length > 0) {
+      const escUI = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const entregables = Array.isArray(payload.plantillas_propuestas) ? payload.plantillas_propuestas : [];
+      if (payload.producto_codigo && entregables.length > 0) {
+        divPipe.innerHTML = entregables.map((e, idx) => `
+          <div class="task-row">
+            <div>
+              <strong style="font-size: 13px; color: var(--xt-texto); display: block;">${idx + 1}. ${escUI(e.nombre || e.codigo)}</strong>
+              <span style="font-size: 11.5px; color: var(--xt-texto-muted);">${escUI(e.codigo)}</span>
+            </div>
+            <span class="insignia insignia-verde">Entregable</span>
+          </div>
+        `).join('') + `<div style="font-size: 11.5px; color: var(--xt-texto-muted); padding-top: 10px;">Se generan uno después del otro, en este orden. En el siguiente paso podrás quitar o agregar entregables.</div>`;
+        document.getElementById('uiCount').innerText = `${entregables.length} entregable${entregables.length === 1 ? '' : 's'}`;
+      } else if (payload.producto_codigo) {
+        divPipe.innerHTML = `<div style="font-size: 13px; color: var(--xt-texto-muted); text-align: center; padding: 18px 0; font-style: italic;">Este producto todavía no tiene plantillas asociadas. En el siguiente paso podrás agregar los entregables.</div>`;
+        document.getElementById('uiCount').innerText = "0 entregables";
+      } else if (payload.plan_agente && payload.plan_agente.length > 0) {
         divPipe.innerHTML = payload.plan_agente.map((t, idx) => `
           <div class="task-row">
             <div>
-              <strong style="font-size: 13px; color: var(--xt-texto); display: block;">${idx + 1}. ${t.nombre}</strong>
-              <span style="font-size: 11.5px; color: var(--xt-texto-muted);">${t.detalle || ''}</span>
+              <strong style="font-size: 13px; color: var(--xt-texto); display: block;">${idx + 1}. ${escUI(t.nombre)}</strong>
+              <span style="font-size: 11.5px; color: var(--xt-texto-muted);">${escUI(t.detalle || '')}</span>
             </div>
-            <span class="insignia insignia-verde">${t.tipo || 'Agente'}</span>
+            <span class="insignia insignia-verde">${escUI(t.tipo || 'Agente')}</span>
           </div>
         `).join('');
         document.getElementById('uiCount').innerText = `${payload.plan_agente.length} tareas`;
       } else {
-        divPipe.innerHTML = `<div style="font-size: 13px; color: var(--xt-texto-muted); text-align: center; padding: 18px 0; font-style: italic;">El plan de tareas se compondrá según el análisis del encargo.</div>`;
-        document.getElementById('uiCount').innerText = "0 tareas";
+        divPipe.innerHTML = `<div style="font-size: 13px; color: var(--xt-texto-muted); text-align: center; padding: 18px 0; font-style: italic;">Los entregables aparecerán cuando TaloX identifique el producto del encargo.</div>`;
+        document.getElementById('uiCount').innerText = "0 entregables";
       }
     }
 
@@ -1428,6 +1456,9 @@ if (esEncargoInterno) {
             if (parsedState.estado_encuadre) payload.estado_encuadre = parsedState.estado_encuadre;
             if (parsedState.bloqueadores) payload.bloqueadores = parsedState.bloqueadores;
             if (parsedState.plan_agente) payload.plan_agente = parsedState.plan_agente;
+            if (parsedState.producto_codigo) payload.producto_codigo = parsedState.producto_codigo;
+            if (parsedState.producto_nombre) payload.producto_nombre = parsedState.producto_nombre;
+            if (Array.isArray(parsedState.plantillas_propuestas)) payload.plantillas_propuestas = parsedState.plantillas_propuestas.map(e => (typeof e === 'string' ? { codigo: e, nombre: e } : e)).filter(e => e && e.codigo);
 
             if (!payload.mandato_operativo) payload.mandato_operativo = {};
             payload.mandato_operativo.tarea_titulo = `Encargo para ${payload.cliente_oficial || 'Cliente'}`;
@@ -1482,6 +1513,44 @@ if (esEncargoInterno) {
 
       btn.disabled = true;
       btn.innerText = "Despachando...";
+
+      // Camino por producto: se crea el pedido y el consultor lo valida en el HITL 0 (quitar/agregar/reordenar entregables)
+      if (!esArquitecto && payload.producto_codigo) {
+        try {
+          const base = url.replace(/\/webhook(-test)?\/[^\/?#]+.*$/, '/webhook$1');
+          const mandato = payload.mandato_operativo && typeof payload.mandato_operativo === 'object' ? payload.mandato_operativo : {};
+          const cuerpo = {
+            cliente_oficial: clienteActual,
+            mandato_operativo: mandato,
+            producto_codigo: payload.producto_codigo,
+            producto_nombre: payload.producto_nombre || null,
+            plantillas_propuestas: Array.isArray(payload.plantillas_propuestas) ? payload.plantillas_propuestas : [],
+            solicitud_origen: reqId,
+            solicitante: payload.solicitante || {},
+            task_gid: payload.task_gid || (payload.referencias && payload.referencias.asana_task_id) || null,
+            asana_task_url: payload.asana_task_url || (payload.referencias && payload.referencias.asana_task_url) || null
+          };
+          const resp = await fetch(base + '/pedido-nuevo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const d = await resp.json();
+          if (!d.pedido_id || !esUrlHttps(d.url)) throw new Error('Respuesta inesperada al crear el pedido');
+          const msgPedido = `📦 **Pedido creado para ${escHtml(clienteActual)}**${payload.producto_nombre ? ' · ' + escHtml(payload.producto_nombre) : ''}.
+
+Antes de empezar, confirma el producto y los entregables (puedes quitar, agregar o reordenar):
+
+${enlaceHtml(d.url, 'Abrir Pantalla del Pedido (HITL 0)')}`;
+          registrarAvisoVisto(d.url);
+          appendMessage(msgPedido, false);
+          conversationHistory.push({ role: "assistant", content: msgPedido });
+          saveSessionState();
+          activarEscuchaPedido(d.pedido_id, clienteActual, d.url);
+        } catch (err) {
+          appendMessage(`⚠️ Error al crear el pedido: ${err.message}`, false);
+        }
+        btn.innerText = "Aprobar y Despachar a n8n";
+        btn.disabled = false;
+        return;
+      }
 
       try {
         const response = await fetch(url, {
@@ -1627,6 +1696,75 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       consultarEstado();
       intervalId = setInterval(consultarEstado, 5000);
       intervalosActivos.set(solicitudId, intervalId);
+    }
+
+    // ---- Seguimiento de pedidos (producto → entregables en secuencia). Los avisos van al muro del chat.
+    const TTL_PEDIDO_MS = 7 * 24 * 60 * 60 * 1000;
+    const pedidosVigilados = new Map();
+    function guardarPedidosActivos() {
+      try { localStorage.setItem('talox_pedidos_activos', JSON.stringify([...pedidosVigilados.values()].map(p => ({ id: p.id, cliente: p.cliente, url: p.url, inicio: p.inicio })))); } catch (_) {}
+    }
+    function quitarPedidoActivo(id) {
+      const p = pedidosVigilados.get(id);
+      if (p && p.timer) clearInterval(p.timer);
+      pedidosVigilados.delete(id);
+      guardarPedidosActivos();
+    }
+    function avisoMuro(clave, texto) {
+      if (eventosProcesados.has(clave)) return;
+      eventosProcesados.add(clave);
+      appendMessage(texto, false);
+      conversationHistory.push({ role: "assistant", content: texto });
+      saveSessionState();
+    }
+    function activarEscuchaPedido(pedidoId, cliente, urlHitl0, inicio) {
+      if (pedidosVigilados.has(pedidoId)) return;
+      const est = { id: pedidoId, cliente: cliente || 'Cliente', url: urlHitl0 || '', inicio: inicio || Date.now(), timer: null, escuchadas: new Set() };
+      pedidosVigilados.set(pedidoId, est);
+      guardarPedidosActivos();
+      const consultar = async () => {
+        try {
+          const { data: ped, error } = await supabaseClient.from('pedidos').select('*').eq('pedido_id', pedidoId).maybeSingle();
+          if (error || !ped) return;
+          const { data: ents } = await supabaseClient.from('pedido_entregables').select('*').eq('pedido_id', pedidoId).order('orden');
+          const lista = ents || [];
+          lista.forEach(e => {
+            if (e.solicitud_id && !est.escuchadas.has(e.solicitud_id)) {
+              est.escuchadas.add(e.solicitud_id);
+              if (!canalesActivos.has(e.solicitud_id)) activarEscuchaEnSegundoPlano(e.solicitud_id, est.cliente, false);
+              if (e.orden > 1 || ped.solicitud_origen !== e.solicitud_id) {
+                avisoMuro(`${pedidoId}_inicio_${e.orden}`, `▶️ **Empieza el entregable ${e.orden} de ${lista.length}** del pedido (\`${escHtml(e.plantilla_codigo)}\`). Te aviso por acá cuando haya algo para revisar.`);
+              }
+            }
+            if (e.estado === 'aprobado') {
+              avisoMuro(`${pedidoId}_aprobado_${e.orden}`, `✅ **Entregable ${e.orden} de ${lista.length} aprobado** (\`${escHtml(e.plantilla_codigo)}\`).${esUrlHttps(e.documento_url) ? '\n\n' + enlaceHtml(e.documento_url, 'Abrir documento') : ''}`);
+            }
+          });
+          if (ped.estado === 'pausado') {
+            const u = urlPedido(est, pedidoId);
+            const cuales = lista.filter(e => e.estado === 'rechazado' || e.estado === 'fallido').map(e => e.plantilla_codigo).join(', ');
+            avisoMuro(`${pedidoId}_pausado_${lista.map(e => e.estado).join('')}`, `⏸️ **El pedido quedó en pausa** (${escHtml(cuales || 'un entregable')} no salió adelante). Decide si rehacerlo, saltearlo o cancelar el pedido:
+
+${enlaceHtml(u, 'Abrir seguimiento del pedido')}`);
+          }
+          if (ped.estado === 'completado') {
+            avisoMuro(`${pedidoId}_completado`, `🏁 **Pedido completado.** Todos los entregables fueron producidos y aprobados.`);
+            quitarPedidoActivo(pedidoId);
+          }
+          if (ped.estado === 'cancelado') {
+            avisoMuro(`${pedidoId}_cancelado`, `🛑 **Pedido cancelado.**`);
+            quitarPedidoActivo(pedidoId);
+          }
+          if (Date.now() - est.inicio > TTL_PEDIDO_MS) quitarPedidoActivo(pedidoId);
+        } catch (err) { console.warn('[TaloX Pedido ' + pedidoId + ']', err); }
+      };
+      consultar();
+      est.timer = setInterval(consultar, 6000);
+    }
+    function urlPedido(est, pedidoId) {
+      if (est && esUrlHttps(est.url)) return est.url;
+      const base = getWebhookUrl().replace(/\/webhook(-test)?\/[^\/?#]+.*$/, '/webhook$1');
+      return base + '/pedido-revisar?pedido_id=' + encodeURIComponent(pedidoId);
     }
 
     function procesarActualizacionSolicitud(registro, canal, onFinalizar, esArquitectoFlag = false) {
