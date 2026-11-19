@@ -47,3 +47,6 @@ button{font:inherit;cursor:pointer}
 .caja-err{background:#fdf3f2;border:1px solid var(--rojo);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:14px}
 .caja-err ul{margin:6px 0 0 18px;padding:0}
 .cambios{font-size:12.5px;color:var(--gris);margin-top:8px}
+
+.chk-proy{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--borde);border-radius:8px;margin-bottom:6px;cursor:pointer}
+.chk-proy small{color:var(--gris)}

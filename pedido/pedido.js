@@ -38,6 +38,7 @@
     $('lista-zona').innerHTML = html;
     $('zona-producto').style.display = 'none';
     $('zona-picker').style.display = 'none';
+    if ($('zona-proyectos')) $('zona-proyectos').style.display = 'none';
     $('pie').style.display = 'none';
     var por = function () { return (prompt('¿Quién decide? (tu nombre)') || '').trim() || 'consultor'; };
     document.querySelectorAll('[data-a]').forEach(function (b) {
@@ -177,17 +178,42 @@
     $('cambios').textContent = (add.length || del.length) ? ('Cambios respecto a la propuesta: ' + (add.length ? '+' + add.length + ' agregado(s) ' : '') + (del.length ? '−' + del.length + ' quitado(s)' : '')) : '';
   }
 
+
+  var proyectosSel = {};
+  function pintarProyectos() {
+    var cont = $('proyectos');
+    var lista = D.proyectos || [];
+    if (!lista.length) { cont.innerHTML = '<p class="ayuda">Este cliente no tiene proyectos registrados: se usarán solo sus documentos generales.</p>'; return; }
+    var asana = norm(P.proyecto_asana || '');
+    lista.forEach(function (p) {
+      var n = norm(p.nombre);
+      proyectosSel[p.drive_folder_id] = Boolean(asana && (asana.indexOf(n) >= 0 || n.indexOf(asana) >= 0));
+    });
+    cont.innerHTML = lista.map(function (p) {
+      return '<label class="chk-proy"><input type="checkbox" data-id="' + esc(p.drive_folder_id) + '"' + (proyectosSel[p.drive_folder_id] ? ' checked' : '') + '> <span>' + esc(p.nombre) + '</span>' + (p.anio ? ' <small>' + esc(p.anio) + '</small>' : '') + '</label>';
+    }).join('');
+    cont.querySelectorAll('input[type=checkbox]').forEach(function (c) {
+      c.onchange = function () { proyectosSel[c.dataset.id] = c.checked; };
+    });
+  }
+  function proyectosElegidos() {
+    return (D.proyectos || []).filter(function (p) { return proyectosSel[p.drive_folder_id]; })
+      .map(function (p) { return { drive_folder_id: p.drive_folder_id, nombre: p.nombre }; });
+  }
+
   function propuestaMode() {
     propuesta();
-    pintarProducto(); pintarLista(); pintarResultados();
+    pintarProducto(); pintarLista(); pintarResultados(); pintarProyectos();
     $('buscar').oninput = pintarResultados;
     $('buscar').onfocus = pintarResultados;
     $('confirmar').onclick = function () {
+      var elegidos = proyectosElegidos();
+      if ((D.proyectos || []).length && !elegidos.length && !confirm('No marcaste ningún proyecto: TaloX buscará insumos solo en los documentos generales del cliente. ¿Continuar?')) return;
       var b = this; b.disabled = true; $('estado').className = 'msg'; $('estado').textContent = 'Confirmando…';
       var por = ($('por').value || '').trim() || 'consultor';
       try { localStorage.setItem('talox_nombre', por); } catch (e) {}
       post('pedido-confirmar', {
-        pedido_id: P.pedido_id, producto: producto, por: por,
+        pedido_id: P.pedido_id, producto: producto, por: por, proyectos: elegidos,
         entregables: lista.map(function (c) { return { plantilla_codigo: c }; })
       }).then(function (r) {
         if (r.ok) { $('estado').textContent = 'Pedido confirmado. TaloX empieza con el primer entregable.'; setTimeout(function () { location.reload(); }, 900); }
