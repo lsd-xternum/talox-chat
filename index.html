@@ -1857,7 +1857,16 @@ Estoy redactando una nueva versión del borrador; te aviso apenas esté lista pa
 
           const log = Array.isArray(registro.errores_log) ? (registro.errores_log[0] || {}) : (registro.errores_log || {});
           let mensajeAlerta;
-          if (registro.estado === 'error_especialista' || log.tipo === 'fallo_especialista') {
+          if (log.tipo === 'limite_iteraciones') {
+            const etapa = log.etapa === 'hitl2' ? 'la revisión final' : 'la validación del encuadre';
+            mensajeAlerta = `🔁 **Se alcanzó el límite de 3 rondas en ${etapa}** (\`${registro.solicitud_id}\`).
+
+${log.mensaje || 'El encargo quedó detenido para evitar ciclos infinitos.'}`;
+          } else if (log.tipo === 'error_documento') {
+            mensajeAlerta = `📄 **No se pudo completar el documento final** (\`${registro.solicitud_id}\`).
+
+${log.mensaje || 'El borrador quedó guardado; puedes relanzar el encargo.'}`;
+          } else if (registro.estado === 'error_especialista' || log.tipo === 'fallo_especialista') {
             mensajeAlerta = `⚠️ **Falló la redacción del encargo** (\`${registro.solicitud_id}\`).
 
 - **Motivo:** ${log.motivo || 'El especialista terminó con error. Revisa la ejecución en n8n.'}
@@ -1952,7 +1961,10 @@ Búscalo en la carpeta de entregables de Drive o avisa al equipo de TaloX para r
         if (!eventosProcesados.has(claveCancel)) {
           eventosProcesados.add(claveCancel);
           cerrarEscucha();
-          const msgCancel = `⚠️ El encargo \`${registro.solicitud_id}\` fue detenido en n8n (${registro.estado}).`;
+          const logC = Array.isArray(registro.errores_log) ? (registro.errores_log[0] || {}) : {};
+          const msgCancel = logC.tipo === 'cancelado' && logC.mensaje
+            ? `🛑 ${logC.mensaje} (\`${registro.solicitud_id}\`)`
+            : `⚠️ El encargo \`${registro.solicitud_id}\` fue detenido en n8n (${registro.estado}).`;
           appendMessage(msgCancel, false);
           conversationHistory.push({ role: "assistant", content: msgCancel });
           saveSessionState();
