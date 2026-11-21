@@ -1866,6 +1866,12 @@ ${log.mensaje || 'El encargo quedó detenido para evitar ciclos infinitos.'}`;
             mensajeAlerta = `📄 **No se pudo completar el documento final** (\`${registro.solicitud_id}\`).
 
 ${log.mensaje || 'El borrador quedó guardado; puedes relanzar el encargo.'}`;
+          } else if (log.tipo === 'error_flujo') {
+            mensajeAlerta = `⚠️ **El proceso se interrumpió por un error inesperado** (\`${registro.solicitud_id}\`).
+
+${log.mensaje || 'Revisa la ejecución en n8n.'}
+
+El encargo quedó detenido; puedes relanzarlo cuando se resuelva la causa.`;
           } else if (registro.estado === 'error_especialista' || log.tipo === 'fallo_especialista') {
             mensajeAlerta = `⚠️ **Falló la redacción del encargo** (\`${registro.solicitud_id}\`).
 
