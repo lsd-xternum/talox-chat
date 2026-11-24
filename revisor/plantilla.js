@@ -175,7 +175,6 @@
 
   function avisosEditor() {
     var a = [];
-    if (!D.workflow_id) a.push('Esta plantilla no tiene un especialista (flujo) asignado: aunque se apruebe, ningún agente la usará todavía.');
     var sg = C.plantilla && C.plantilla.sugerencia;
     if (sg && sg.estado && sg.estado !== 'ok') a.push('La sugerencia automática de TaloX quedó ' + esc(sg.estado) + (sg.motivo ? ' (' + esc(sg.motivo) + ')' : '') + ': lo que falta aparece sin definir.');
     var pend = todos().filter(function (x) { return x.o.validacion && x.o.validacion.estado === 'sugerido'; }).length;
@@ -202,7 +201,8 @@
     var faltaDef = l.filter(function (x) { return !completo(x); }).length;
     var perfil = C.perfil_flujo && C.perfil_flujo.valor;
     var gp = globalesPendientes().length;
-    return { total: l.length, validados: val, faltaDef: faltaDef, perfil: !!perfil, globales: gp, listo: l.length > 0 && val === l.length && faltaDef === 0 && !!perfil && gp === 0 };
+    var alta = window.AltaEntregable ? window.AltaEntregable.faltan() : [];
+    return { total: l.length, validados: val, faltaDef: faltaDef, perfil: !!perfil, globales: gp, alta: alta, listo: l.length > 0 && val === l.length && faltaDef === 0 && !!perfil && gp === 0 && alta.length === 0 };
   }
   function actualizarProgreso() {
     var e = estado();
@@ -211,10 +211,11 @@
     if (!e.perfil) txt += ' · falta el perfil de flujo';
     if (e.globales) txt += ' · faltan confirmar datos generales';
     if (e.faltaDef) txt += ' · ' + e.faltaDef + ' sin origen o formato';
+    if (e.alta.length) txt += ' · en el alta falta: ' + e.alta.join(', ');
     p.textContent = txt;
     p.className = 'progreso' + (e.listo ? ' ok' : '');
     var b = $('btnAprobar');
-    if (b) { b.disabled = !e.listo; b.title = e.listo ? '' : 'Valida todos los elementos, define origen, formato y perfil de flujo y confirma los datos generales propuestos'; }
+    if (b) { b.disabled = !e.listo; b.title = e.listo ? '' : 'Valida todos los elementos, define origen, formato y perfil de flujo, confirma los datos generales propuestos y completa el alta del entregable (producto, especialista, área y descripción)'; }
   }
   function invalidar(o) {
     if (o.validacion && o.validacion.estado === 'validado') { o.validacion = { estado: 'editado', validado_por: null, validado_el: null }; return true; }
@@ -337,8 +338,9 @@
   };
   window.enviarAprobacion = function () {
     bloquear('Guardando y aprobando...');
-    guardar().then(function () { return llamar('aprobar-plantilla', { file_id: D.file_id, estado: 'aprobado' }); })
-      .then(function () { confirmar('¡Plantilla Aprobada!', 'El contrato quedó validado y la plantilla disponible para los agentes redactores en producción.', true); })
+    guardar().then(function () { return window.AltaEntregable.guardar(quien()); })
+      .then(function () { return llamar('aprobar-plantilla', { file_id: D.file_id, por: quien() }); })
+      .then(function () { confirmar('¡Plantilla Aprobada!', 'El contrato quedó validado, el alta del entregable guardada y la plantilla disponible en el catálogo de TaloX.', true); })
       .catch(function (e) { desbloquear(); if (e.message !== 'sin nombre') alert('No se pudo aprobar: ' + e.message); });
   };
   window.iniciarRechazo = function () {
@@ -361,6 +363,7 @@
   });
   document.addEventListener('change', alCambiar);
   document.addEventListener('click', alClick);
+  document.addEventListener('alta-cambio', actualizarProgreso);
   try { var g = localStorage.getItem('talox_revisor'); if (g) $('validadoPor').value = g; } catch (e) {}
   $('validadoPor').addEventListener('input', function () { try { localStorage.setItem('talox_revisor', this.value); } catch (e) {} });
   render();

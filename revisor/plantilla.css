@@ -124,3 +124,17 @@ table.doc-table th { background-color: #F7F8F6; color: var(--negro); font-family
 .id.sugerido { background: #FFF4D6; color: #7A5A00; border-radius: 10px; padding: 1px 8px; margin-left: 8px; font-size: 11.5px; }
 body.solo-pendiente .campo-card.validado { display: none; }
 .filtro-pendiente { margin: 0 0 14px; font-size: 13.5px; }
+
+/* Alta del entregable */
+.opciones-lista { display: grid; gap: 8px; }
+.opcion { display: flex; gap: 10px; align-items: flex-start; border: 1.5px solid var(--borde); border-radius: 10px; padding: 10px 14px; cursor: pointer; background: #fff; }
+.opcion.elegida { border-color: var(--verde); background: #F1F8F2; }
+.opcion input { margin-top: 4px; flex: none; }
+.opcion-cuerpo { display: grid; gap: 3px; font-size: 13.5px; }
+.opcion-cuerpo b { font-family: "Montserrat", Arial, sans-serif; font-size: 14px; color: var(--negro); }
+.opcion-cuerpo .d { color: var(--texto); }
+.opcion-cuerpo .d i { color: var(--suave); font-style: normal; font-weight: 700; }
+.opcion-cuerpo .aviso-txt { color: #7A5A00; font-size: 12.5px; }
+.fila-alta { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+.malo-txt { color: var(--error); }
+@media (max-width: 640px) { .cuerpo { padding: 8px 16px 24px; } .opcion { padding: 10px; } }

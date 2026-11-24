@@ -1213,6 +1213,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
         if (welcome && conversationHistory.length === 0) {
           welcome.innerHTML = `Hola. Sistema operativo enlazado con <strong>${totalServ} servicios de catálogo</strong> y <strong>${resumen.flujos || 0} flujos de n8n sincronizados</strong>.<br><br>Listo para estructurar: decime para qué cliente es y cuál es el dolor o encargo inicial.`;
         }
+        avisarPlantillasPendientes(url, headers);
       } catch (err) {
         statusPill.className = "status-pill offline";
         statusPill.innerText = "Error de conexión";
@@ -1709,6 +1710,18 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       if (p && p.timer) clearInterval(p.timer);
       pedidosVigilados.delete(id);
       guardarPedidosActivos();
+    }
+    // Aviso en el muro: plantillas que esperan revisión (contrato, especialista, producto, datos del entregable) con enlace directo a la pantalla de revisión.
+    async function avisarPlantillasPendientes(url, headers) {
+      try {
+        const res = await fetch(`${url}/rest/v1/rpc/plantillas_pendientes`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
+        if (!res.ok) return;
+        const lista = await res.json();
+        if (!Array.isArray(lista) || !lista.length) return;
+        const base = 'https://inteligencia-xternum.app.n8n.cloud/webhook/revisar-plantilla?codigo=';
+        const lineas = lista.map(p => `- **${escHtml(p.nombre || p.codigo)}**${Array.isArray(p.faltan) && p.faltan.length ? ': falta ' + p.faltan.map(escHtml).join(', ') : ''}\n  ${enlaceHtml(base + encodeURIComponent(p.codigo), 'Abrir revisión')}`);
+        appendMessage(`📝 **${lista.length === 1 ? 'Hay 1 plantilla esperando revisión' : 'Hay ' + lista.length + ' plantillas esperando revisión'}**\n\n${lineas.join('\n')}`, false);
+      } catch (_) { /* el aviso es opcional: si falla, el muro sigue normal */ }
     }
     function avisoMuro(clave, texto) {
       if (eventosProcesados.has(clave)) return;
