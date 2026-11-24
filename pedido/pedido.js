@@ -8,6 +8,8 @@
   var productos = {};
   cat.productos.forEach(function (p) { productos[p.codigo] = p; });
   var $ = function (id) { return document.getElementById(id); };
+  // El HTML del flujo trae <main class="cuerpo">; se adapta al patrón HITL (#contenido > .cuerpo) para poder mostrar la pantalla final.
+  (function () { var m = document.querySelector('main.cuerpo'); if (m && !document.getElementById('contenido')) { m.id = 'contenido'; m.className = ''; m.innerHTML = '<div class="cuerpo">' + m.innerHTML + '</div>'; } })();
   var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
   var norm = function (s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); };
   var ESTADOS = { pendiente: ['Pendiente', 'azul'], en_curso: ['En curso', 'ambar'], aprobado: ['Aprobado', 'verde'], rechazado: ['Rechazado', 'rojo'], fallido: ['Falló', 'rojo'], salteado: ['Salteado', ''] };
@@ -17,44 +19,115 @@
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok && j.ok !== false, j: j }; }); });
   }
 
+  /* ---------- Pantalla final (mismo patrón que el resto de HITL) ---------- */
+  function confirmar(titulo, mensaje, exito, extra) {
+    $('contenido').innerHTML = '<div class="confirmacion"><div class="' + (exito ? 'tilde' : 'cruz') + '">' + (exito ? '✓' : '✕') + '</div><h2>' + titulo + '</h2><p>' + mensaje + '</p>' + (extra || '') + '</div>';
+    var pie = $('pie'); if (pie) pie.remove();
+    window.scrollTo(0, 0);
+  }
+
   /* ---------- Modo gestión (pedido ya confirmado) ---------- */
-  function gestion() {
-    $('titulo-paso').textContent = 'Seguimiento del pedido';
-    var ents = D.entregables || [];
-    var html = '<p class="ayuda">Estado del pedido: <strong>' + esc(P.estado) + '</strong>. Los entregables se producen uno después del otro; cada uno aprobado alimenta al siguiente.</p><ul class="lista">';
+  var ETAPAS = {
+    iniciado: 'Preparando el encargo', triage_completado: 'Analizando insumos del cliente',
+    hitl1_pendiente: 'Esperando tu aprobación del encuadre', hitl1_aprobado: 'Encuadre aprobado: redactando',
+    hitl1_iterando: 'Ajustando el encuadre', en_redaccion_especialista: 'Redactando el borrador',
+    en_auditoria_calidad: 'En auditoría de calidad', hitl2_pendiente: 'Esperando tu revisión del borrador',
+    hitl2_aprobado: 'Borrador aprobado: generando el documento', finalizado_con_exito: 'Documento listo',
+    cancelado: 'Cancelado', error_sistema: 'Error del sistema', error_especialista: 'Error en la redacción'
+  };
+
+  function recordarNombre(v) { try { if (v != null) localStorage.setItem('talox_nombre', v); return localStorage.getItem('talox_nombre') || ''; } catch (e) { return ''; } }
+
+  function listaEntregables(ents, conAcciones) {
+    var html = '<ul class="lista">';
     ents.forEach(function (e) {
       var st = ESTADOS[e.estado] || [e.estado, ''];
       var acciones = '';
-      if (P.estado === 'pausado' && (e.estado === 'rechazado' || e.estado === 'fallido')) {
+      if (conAcciones && P.estado === 'pausado' && (e.estado === 'rechazado' || e.estado === 'fallido')) {
         acciones = '<button class="mini" data-a="rehacer" data-o="' + e.orden + '">Rehacer</button> <button class="mini" data-a="saltear" data-o="' + e.orden + '">Saltear</button>';
       }
-      html += '<li class="item"><span class="orden">' + e.orden + '</span><span class="nombre">' + esc(e.plantilla_nombre || e.plantilla_codigo) +
+      var etapa = (conAcciones && e.estado === 'en_curso' && e.solicitud_estado) ? '<small><strong>' + esc(ETAPAS[e.solicitud_estado] || e.solicitud_estado) + '</strong>' + (e.enlace_aprobacion ? ' · <a href="' + esc(e.enlace_aprobacion) + '" target="_blank">Abrir para revisar y aprobar ↗</a>' : '') + '</small>' : '';
+      html += '<li class="item"><span class="orden">' + e.orden + '</span><span class="nombre">' + esc(e.plantilla_nombre || e.plantilla_codigo) + etapa +
         '<small>' + esc(e.notas || '') + (e.documento_url ? ' <a href="' + esc(e.documento_url) + '" target="_blank">Abrir documento ↗</a>' : '') + '</small></span>' +
         '<span class="etq ' + st[1] + '">' + esc(st[0]) + '</span>' + acciones + '</li>';
     });
-    html += '</ul><div id="msg" class="msg"></div>';
-    if (P.estado === 'pausado') html += '<div class="caja-err">El pedido está en pausa: un entregable fue rechazado o falló. Elige qué hacer con él: <strong>Rehacer</strong> lo vuelve a producir, <strong>Saltear</strong> continúa con el siguiente, o cancela el pedido.</div>';
-    if (P.estado === 'en_curso' || P.estado === 'pausado') html += '<p><button class="boton-peligro" id="cancelar">Cancelar pedido</button></p>';
-    $('lista-zona').innerHTML = html;
-    $('zona-producto').style.display = 'none';
-    $('zona-picker').style.display = 'none';
-    if ($('zona-proyectos')) $('zona-proyectos').style.display = 'none';
-    $('pie').style.display = 'none';
-    var por = function () { return (prompt('¿Quién decide? (tu nombre)') || '').trim() || 'consultor'; };
+    return html + '</ul>';
+  }
+
+  function gestion() {
+    var ents = D.entregables || [];
+    $('titulo-paso').textContent = 'Seguimiento del pedido · Producción de entregables';
+
+    if (P.estado === 'cancelado') {
+      confirmar('Pedido Cancelado', 'El pedido ha quedado detenido definitivamente: los entregables pendientes no se producirán.', false, listaEntregables(ents, false));
+      return;
+    }
+    if (P.estado === 'completado') {
+      confirmar('¡Pedido Completado!', 'Todos los entregables del pedido fueron producidos y aprobados.', true, listaEntregables(ents, false));
+      return;
+    }
+
+    var total = ents.length;
+    var actual = ents.filter(function (e) { return e.estado === 'en_curso'; })[0];
+    var hechos = ents.filter(function (e) { return e.estado === 'aprobado' || e.estado === 'salteado'; }).length;
+    var aviso;
+    if (P.estado === 'pausado') {
+      aviso = '<div class="aviso-caja"><h4>⏸ Pedido en pausa</h4><p>Un entregable fue rechazado o falló. Elige qué hacer con él: <strong>Rehacer</strong> lo vuelve a producir, <strong>Saltear</strong> continúa con el siguiente, o cancela el pedido.</p></div>';
+    } else if (actual && actual.enlace_aprobacion) {
+      aviso = '<div class="aviso-caja"><h4>⏳ Hace falta tu decisión</h4><p><strong>' + esc(ETAPAS[actual.solicitud_estado] || actual.solicitud_estado) + '</strong> · <a href="' + esc(actual.enlace_aprobacion) + '" target="_blank">Abrir para revisar y aprobar ↗</a></p></div>';
+    } else {
+      aviso = '<div class="aviso-caja limpio"><h4>✓ Pedido en producción</h4><p>' + (actual ? 'TaloX trabaja en el entregable ' + actual.orden + ' de ' + total + ': <strong>' + esc(ETAPAS[actual.solicitud_estado] || 'en curso') + '</strong>.' : 'TaloX está preparando el siguiente entregable.') + ' Llevas ' + hechos + ' de ' + total + ' resueltos.</p></div>';
+    }
+
+    $('contenido').innerHTML = '<div class="cuerpo"><section class="seccion"><h2><span class="num">1</span>Estado del pedido</h2>' +
+      '<p class="ayuda">Los entregables se producen uno después del otro; cada uno aprobado alimenta al siguiente. Esta pantalla se actualiza sola cada 15 segundos.</p>' +
+      aviso + '</section><section class="seccion"><h2><span class="num">2</span>Entregables, en orden</h2>' + listaEntregables(ents, true) + '<div id="msg" class="msg"></div></section></div>';
+
+    var pie = $('pie');
+    pie.innerHTML = '<div class="pie-interior" id="pie-gestion"></div>';
+    var confirmando = false;
+    var por = function () { var v = ($('por-g') ? $('por-g').value : '').trim() || 'consultor'; recordarNombre(v); return v; };
+    var aviso_ = function (t) { $('msg').className = 'msg err'; $('msg').textContent = t; };
+
+    function pintarPie() {
+      confirmando = false;
+      $('pie-gestion').innerHTML = '<div class="quien"><label for="por-g">Quién decide:</label><input type="text" id="por-g" placeholder="tu nombre"></div>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="boton-iterar" id="actualizar">🔄 Actualizar ahora</button><button type="button" class="boton-rechazo" id="cancelar">✕ Cancelar Pedido</button></div>';
+      $('por-g').value = recordarNombre();
+      $('actualizar').onclick = function () { location.reload(); };
+      $('cancelar').onclick = pedirConfirmacion;
+    }
+    function pedirConfirmacion() {
+      confirmando = true;
+      var v = ($('por-g') ? $('por-g').value : '');
+      $('pie-gestion').innerHTML = '<div class="iteracion-caja"><span>¿Cancelar el pedido? Los entregables pendientes no se producirán.</span>' +
+        '<input type="text" id="por-g" placeholder="tu nombre" style="max-width:200px">' +
+        '<button type="button" class="boton-iterar" id="no-cancelar">Volver</button><button type="button" class="boton-rechazo" id="si-cancelar">✕ Sí, cancelar pedido</button></div>';
+      $('por-g').value = v || recordarNombre();
+      $('no-cancelar').onclick = pintarPie;
+      $('si-cancelar').onclick = function () {
+        var bt = $('si-cancelar'); bt.disabled = true; bt.textContent = 'Cancelando pedido...';
+        post('pedido-accion', { pedido_id: P.pedido_id, accion: 'cancelar', por: por() }).then(function (r) {
+          if (r.ok) confirmar('Pedido Cancelado', 'El pedido ha quedado detenido definitivamente: los entregables pendientes no se producirán.', false);
+          else { aviso_(r.j.motivo || 'No se pudo cancelar'); bt.disabled = false; bt.textContent = '✕ Sí, cancelar pedido'; }
+        }).catch(function () { aviso_('No hubo respuesta del servidor. Intenta de nuevo.'); bt.disabled = false; bt.textContent = '✕ Sí, cancelar pedido'; });
+      };
+    }
+    pintarPie();
+
     document.querySelectorAll('[data-a]').forEach(function (b) {
       b.onclick = function () {
         b.disabled = true;
         post('pedido-accion', { pedido_id: P.pedido_id, accion: b.dataset.a, orden: Number(b.dataset.o), por: por() }).then(function (r) {
-          if (r.ok) location.reload(); else { $('msg').className = 'msg err'; $('msg').textContent = r.j.motivo || 'No se pudo aplicar la acción'; b.disabled = false; }
-        });
+          if (r.ok) location.reload(); else { aviso_(r.j.motivo || 'No se pudo aplicar la acción'); b.disabled = false; }
+        }).catch(function () { aviso_('No hubo respuesta del servidor. Intenta de nuevo.'); b.disabled = false; });
       };
     });
-    var c = $('cancelar');
-    if (c) c.onclick = function () {
-      if (!confirm('¿Cancelar el pedido? Los entregables pendientes no se producirán.')) return;
-      post('pedido-accion', { pedido_id: P.pedido_id, accion: 'cancelar', por: por() }).then(function (r) { if (r.ok) location.reload(); else { $('msg').className = 'msg err'; $('msg').textContent = r.j.motivo || 'No se pudo cancelar'; } });
-    };
-    if (P.estado === 'en_curso') setTimeout(function () { location.reload(); }, 20000);
+
+    setInterval(function () {
+      if (confirmando || document.activeElement === $('por-g')) return;
+      location.reload();
+    }, 15000);
   }
 
   /* ---------- Modo propuesta (HITL 0) ---------- */
@@ -79,7 +152,7 @@
     $('producto').innerHTML = h;
     $('producto').onchange = function () {
       producto = this.value || null;
-      if (producto && productos[producto] && confirm('¿Reemplazar la lista actual por los entregables de este producto?')) {
+      if (producto && productos[producto]) {
         lista = productos[producto].plantillas.filter(function (c) { return plantillas[c]; });
       }
       pintarLista(); pintarResultados();
@@ -202,13 +275,18 @@
   }
 
   function propuestaMode() {
+    var sinProyectoOk = false;
     propuesta();
     pintarProducto(); pintarLista(); pintarResultados(); pintarProyectos();
     $('buscar').oninput = pintarResultados;
     $('buscar').onfocus = pintarResultados;
     $('confirmar').onclick = function () {
       var elegidos = proyectosElegidos();
-      if ((D.proyectos || []).length && !elegidos.length && !confirm('No marcaste ningún proyecto: TaloX buscará insumos solo en los documentos generales del cliente. ¿Continuar?')) return;
+      if ((D.proyectos || []).length && !elegidos.length && !sinProyectoOk) {
+        sinProyectoOk = true;
+        $('avisos').innerHTML = '<div class="caja-err">No marcaste ningún proyecto de Drive: TaloX buscará insumos solo en los documentos generales del cliente. Marca un proyecto, o vuelve a pulsar <strong>Confirmar pedido</strong> para continuar así.</div>';
+        return;
+      }
       var b = this; b.disabled = true; $('estado').className = 'msg'; $('estado').textContent = 'Confirmando…';
       var por = ($('por').value || '').trim() || 'consultor';
       try { localStorage.setItem('talox_nombre', por); } catch (e) {}
@@ -216,7 +294,7 @@
         pedido_id: P.pedido_id, producto: producto, por: por, proyectos: elegidos,
         entregables: lista.map(function (c) { return { plantilla_codigo: c }; })
       }).then(function (r) {
-        if (r.ok) { $('estado').textContent = 'Pedido confirmado. TaloX empieza con el primer entregable.'; setTimeout(function () { location.reload(); }, 900); }
+        if (r.ok) { confirmar('¡Pedido Confirmado!', 'El pedido fue validado y TaloX empieza con el primer entregable. Podrás seguir el avance y aprobar cada etapa desde esta misma página.', true, '<p><button type="button" class="boton" id="ver-seg">Ver seguimiento del pedido</button></p>'); $('ver-seg').onclick = function () { location.reload(); }; }
         else {
           var mot = r.j.motivos || [r.j.mensaje || 'No se pudo confirmar'];
           $('avisos').innerHTML = '<div class="caja-err"><ul>' + mot.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
