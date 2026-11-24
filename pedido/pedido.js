@@ -259,13 +259,29 @@
     var lista = D.proyectos || [];
     if (!lista.length) { cont.innerHTML = '<p class="ayuda">Este cliente no tiene proyectos registrados: se usarán solo sus documentos generales.</p>'; return; }
     var asana = norm(P.proyecto_asana || '');
+    var pre = [], otros = [];
     lista.forEach(function (p) {
       var n = norm(p.nombre);
-      proyectosSel[p.drive_folder_id] = Boolean(asana && (asana.indexOf(n) >= 0 || n.indexOf(asana) >= 0));
+      var sel = Boolean(asana && (asana.indexOf(n) >= 0 || n.indexOf(asana) >= 0));
+      proyectosSel[p.drive_folder_id] = sel;
+      (sel ? pre : otros).push(p);
     });
-    cont.innerHTML = lista.map(function (p) {
+    var item = function (p) {
       return '<label class="chk-proy"><input type="checkbox" data-id="' + esc(p.drive_folder_id) + '"' + (proyectosSel[p.drive_folder_id] ? ' checked' : '') + '> <span>' + esc(p.nombre) + '</span>' + (p.anio ? ' <small>' + esc(p.anio) + '</small>' : '') + '</label>';
-    }).join('');
+    };
+    var html = '';
+    if (pre.length) {
+      html += '<p class="ayuda">Según la tarea de Asana, este pedido corresponde a:</p>' + pre.map(item).join('') +
+        '<p class="ayuda">Valida que sea el correcto. Si no lo es, desmárcalo y elige otro.</p>';
+    } else {
+      html += '<div class="aviso-caja"><h4>No pude identificar el proyecto</h4><p>La tarea de Asana no coincide con ninguno de los proyectos registrados del cliente. Elige al menos uno de la lista.</p></div>';
+    }
+    if (otros.length) {
+      html += '<details class="otros-proy"' + (pre.length ? '' : ' open') + '><summary>' +
+        (pre.length ? 'Ver otros proyectos del cliente (' + otros.length + ') por si hace falta sumar alguno' : 'Proyectos del cliente (' + otros.length + ')') +
+        '</summary>' + otros.map(item).join('') + '</details>';
+    }
+    cont.innerHTML = html;
     cont.querySelectorAll('input[type=checkbox]').forEach(function (c) {
       c.onchange = function () { proyectosSel[c.dataset.id] = c.checked; };
     });
