@@ -102,12 +102,13 @@
       var v = ($('por-g') ? $('por-g').value : '');
       $('pie-gestion').innerHTML = '<div class="iteracion-caja"><span>¿Cancelar el pedido? Los entregables pendientes no se producirán.</span>' +
         '<input type="text" id="por-g" placeholder="tu nombre" style="max-width:200px">' +
+        '<input type="text" id="motivo-g" placeholder="Motivo (opcional)" maxlength="300" style="flex:1;min-width:200px">' +
         '<button type="button" class="boton-iterar" id="no-cancelar">Volver</button><button type="button" class="boton-rechazo" id="si-cancelar">✕ Sí, cancelar pedido</button></div>';
       $('por-g').value = v || recordarNombre();
       $('no-cancelar').onclick = pintarPie;
       $('si-cancelar').onclick = function () {
         var bt = $('si-cancelar'); bt.disabled = true; bt.textContent = 'Cancelando pedido...';
-        post('pedido-accion', { pedido_id: P.pedido_id, accion: 'cancelar', por: por() }).then(function (r) {
+        post('pedido-accion', { pedido_id: P.pedido_id, accion: 'cancelar', por: por(), motivo: ($('motivo-g') ? $('motivo-g').value : '').trim() }).then(function (r) {
           if (r.ok) confirmar('Pedido Cancelado', 'El pedido ha quedado detenido definitivamente: los entregables pendientes no se producirán.', false);
           else { aviso_(r.j.motivo || 'No se pudo cancelar'); bt.disabled = false; bt.textContent = '✕ Sí, cancelar pedido'; }
         }).catch(function () { aviso_('No hubo respuesta del servidor. Intenta de nuevo.'); bt.disabled = false; bt.textContent = '✕ Sí, cancelar pedido'; });
