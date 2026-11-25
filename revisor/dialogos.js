@@ -1,6 +1,6 @@
 // Avisos, confirmaciones y pedidos de texto propios de TaloX, en lugar de los cuadros del navegador (alert, confirm, prompt):
 // no bloquean la página, se leen bien en el móvil y respetan los colores de Xternum.
-// Uso: TaloXDialogo.aviso(texto) | .confirmar(texto, {si, no}) -> Promise<boolean> | .pedirTexto(texto, {etiqueta, si}) -> Promise<string|null>
+// Uso: TaloXDialogo.aviso(texto) | .confirmar(texto, {si, no}) -> Promise<boolean> | .pedirTexto(texto, {etiqueta, si}) -> Promise<string|null> (null si se cancela; texto, posiblemente vacío, si se acepta)
 (function () {
   if (window.TaloXDialogo) return;
   var css = '.tdlg-fondo{position:fixed;inset:0;background:rgba(29,29,27,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:99999}' +
@@ -26,7 +26,7 @@
       f.innerHTML = h; document.body.appendChild(f);
       var campo = f.querySelector('textarea'), si = f.querySelector('.tdlg-si'), no = f.querySelector('.tdlg-no');
       function cerrar(v) { document.removeEventListener('keydown', tecla, true); f.remove(); try { if (previo && previo.focus) previo.focus(); } catch (e) {} resolve(v); }
-      function aceptar() { cerrar(o.campo ? (campo.value.trim() || null) : true); }
+      function aceptar() { cerrar(o.campo ? campo.value.trim() : true); }
       function cancelar() { cerrar(o.campo ? null : false); }
       function tecla(ev) {
         if (ev.key === 'Escape') { ev.stopPropagation(); (o.no === false ? aceptar : cancelar)(); }
