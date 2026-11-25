@@ -20,6 +20,9 @@
   var origenAbierto = {};
   function ayuda(t) { return '<div class="hint ayuda-campo">' + t + '</div>'; }
   function hoy() { return new Date().toISOString(); }
+  function dlgAviso(m) { return window.TaloXDialogo ? window.TaloXDialogo.aviso(m) : (alert(m), Promise.resolve()); }
+  function dlgConfirmar(m, o) { return window.TaloXDialogo ? window.TaloXDialogo.confirmar(m, o) : Promise.resolve(confirm(m)); }
+  function dlgTexto(m, o) { return window.TaloXDialogo ? window.TaloXDialogo.pedirTexto(m, o) : Promise.resolve(prompt(m)); }
   function quien() { var v = $('validadoPor'); return v ? v.value.trim() : ''; }
 
   // ---- acceso a campos por ruta: "c:2" campo fijo; "b:1" bloque; "b:1:3" campo del bloque 1
@@ -239,7 +242,7 @@
       var o = obtener(ruta);
       if (t.hasAttribute('data-validar')) {
         if (t.checked) {
-          if (!quien()) { alert('Escribe tu nombre en el pie de la página antes de validar.'); t.checked = false; return; }
+          if (!quien()) { dlgAviso('Escribe tu nombre en el pie de la página antes de validar.'); t.checked = false; return; }
           o.validacion = { estado: 'validado', validado_por: quien(), validado_el: hoy() };
         } else {
           o.validacion = { estado: 'editado', validado_por: null, validado_el: null };
@@ -326,7 +329,7 @@
       .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { if (!res.ok || j.ok === false) throw new Error(j.mensaje || 'Error del servidor'); return j; }); });
   }
   function guardar() {
-    if (!quien()) { alert('Escribe tu nombre en el pie de la página.'); return Promise.reject(new Error('sin nombre')); }
+    if (!quien()) { dlgAviso('Escribe tu nombre en el pie de la página.'); return Promise.reject(new Error('sin nombre')); }
     return llamar('guardar-contrato', { file_id: D.file_id, contrato: C, validado_por: quien(), cargado_el: D.actualizado_el || null })
       .then(function (j) { if (j.actualizado_el) D.actualizado_el = j.actualizado_el; return j; });
   }
@@ -334,28 +337,32 @@
   window.guardarContrato = function () {
     bloquear('Guardando contrato...');
     guardar().then(function (j) { desbloquear(); $('estadoAccion').textContent = 'Guardado (' + j.contrato_estado + ')'; })
-      .catch(function (e) { desbloquear(); if (e.message !== 'sin nombre') alert('No se pudo guardar: ' + e.message); });
+      .catch(function (e) { desbloquear(); if (e.message !== 'sin nombre') dlgAviso('No se pudo guardar: ' + e.message); });
   };
   window.enviarAprobacion = function () {
     bloquear('Guardando y aprobando...');
     guardar().then(function () { return window.AltaEntregable.guardar(quien()); })
       .then(function () { return llamar('aprobar-plantilla', { file_id: D.file_id, por: quien() }); })
       .then(function () { confirmar('¡Plantilla Aprobada!', 'El contrato quedó validado, el alta del entregable guardada y la plantilla disponible en el catálogo de TaloX.', true); })
-      .catch(function (e) { desbloquear(); if (e.message !== 'sin nombre') alert('No se pudo aprobar: ' + e.message); });
+      .catch(function (e) { desbloquear(); if (e.message !== 'sin nombre') dlgAviso('No se pudo aprobar: ' + e.message); });
   };
   window.iniciarRechazo = function () {
-    var m = prompt('Motivo del rechazo:'); if (!m) return;
-    bloquear('Registrando rechazo...');
-    llamar('rechazar-plantilla', { file_id: D.file_id, motivo: m })
-      .then(function () { confirmar('Plantilla Rechazada', 'Se registró el rechazo con las observaciones para su corrección.', false); })
-      .catch(function (e) { alert('Error: ' + e.message); desbloquear(); });
+    dlgTexto('Indica el motivo del rechazo para que quede registrado con las observaciones.', { etiqueta: 'Motivo del rechazo', si: 'Rechazar plantilla' }).then(function (m) {
+      if (!m) return;
+      bloquear('Registrando rechazo...');
+      return llamar('rechazar-plantilla', { file_id: D.file_id, motivo: m })
+        .then(function () { confirmar('Plantilla Rechazada', 'Se registró el rechazo con las observaciones para su corrección.', false); })
+        .catch(function (e) { dlgAviso('Error: ' + e.message); desbloquear(); });
+    });
   };
   window.solicitarReauditoria = function () {
-    if (!confirm('TaloX va a leer de nuevo el documento en Drive y a procesarlo otra vez: conserva lo que ya validaste y no cambió, y propone lo nuevo. Los cambios que no guardaste en esta página se pierden. ¿Continuar?')) return;
-    bloquear('TaloX está procesando de nuevo el documento (puede tardar un minuto)...');
-    llamar('reauditar-plantilla', { file_id: D.file_id })
-      .then(function () { location.reload(); })
-      .catch(function (e) { alert('No se pudo procesar de nuevo el documento: ' + e.message); desbloquear(); });
+    dlgConfirmar('TaloX va a leer de nuevo el documento en Drive y a procesarlo otra vez: conserva lo que ya validaste y no cambió, y propone lo nuevo. Los cambios que no guardaste en esta página se pierden. ¿Continuar?', { si: 'Procesar de nuevo' }).then(function (ok) {
+      if (!ok) return;
+      bloquear('TaloX está procesando de nuevo el documento (puede tardar un minuto)...');
+      return llamar('reauditar-plantilla', { file_id: D.file_id })
+        .then(function () { location.reload(); })
+        .catch(function (e) { dlgAviso('No se pudo procesar de nuevo el documento: ' + e.message); desbloquear(); });
+    });
   };
 
   document.addEventListener('change', function (ev) {

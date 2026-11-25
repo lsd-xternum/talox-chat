@@ -11,6 +11,7 @@
   
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="revisor/dialogos.js?v=1"></script>
 
   <style>
     :root {
@@ -982,7 +983,7 @@
         provider: 'google',
         options: { redirectTo: redirectUri }
       });
-      if (error) alert("Error al conectar con Google: " + error.message);
+      if (error) avisoDialogo("Error al conectar con Google: " + error.message);
     }
 
     async function logout() {
@@ -1157,11 +1158,17 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
       } catch (_) {}
     }
 
+    // Avisos y confirmaciones propios (revisor/dialogos.js); si el módulo no cargó, se usa el cuadro del navegador
+    function avisoDialogo(texto) { if (window.TaloXDialogo) return window.TaloXDialogo.aviso(texto); alert(texto); return Promise.resolve(); }
+    function confirmarDialogo(texto, opciones) { return window.TaloXDialogo ? window.TaloXDialogo.confirmar(texto, opciones) : Promise.resolve(confirm(texto)); }
     function nuevaSesion() {
       if (conversationHistory.length > 0) {
-        const confirmar = confirm("¿Deseas iniciar una nueva sesión? Se limpiará el chat y el encuadre actual.");
-        if (!confirmar) return;
+        confirmarDialogo("¿Deseas iniciar una nueva sesión? Se limpiará el chat y el encuadre actual.", { si: "Nueva sesión" }).then(ok => { if (ok) nuevaSesionEjecutar(); });
+        return;
       }
+      nuevaSesionEjecutar();
+    }
+    function nuevaSesionEjecutar() {
       if (window.location.search) window.history.replaceState({}, document.title, window.location.pathname);
 
       conversationHistory = [];
@@ -1497,7 +1504,7 @@ if (esEncargoInterno) {
       const btn = document.getElementById('btnAprobar');
       
       if (!url) {
-        alert("Falta configurar el Webhook de n8n.");
+        avisoDialogo("Falta configurar el Webhook de n8n.");
         return;
       }
 
