@@ -14,6 +14,7 @@
   var P = AL.plantilla || {};
   var SUG = AL.sugerida || null;
   var CAT = AL.catalogos || { productos: [], areas: [], especialistas: [], destinatarios: ['cliente', 'interno'] };
+  var URL_ESP = 'https://inteligencia-xternum.app.n8n.cloud/webhook/revisar-especialistas';
   var guardados = (AL.productos || []).map(function (p) { return p.codigo; });
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -53,6 +54,7 @@
     var f = [];
     if (!A.productos.length) f.push('el producto');
     if (A.nueva || !A.workflow_id) f.push(A.nueva ? 'esperar el especialista nuevo' : 'el especialista');
+    else { var esp = (CAT.especialistas || []).filter(function (e) { return e.workflow_id === A.workflow_id; })[0]; if (esp && !esp.descripcion_revisada) f.push('validar la descripción del especialista'); }
     if (vacio(A.area)) f.push('el área');
     if (vacio(A.descripcion)) f.push('la descripción del entregable');
     return f;
@@ -67,7 +69,7 @@
       h += '<span class="d">' + esc(e.para_que_sirve || 'Sin descripción: pregunta al equipo de TaloX qué hace.') + '</span>';
       if (e.aplica_a) h += '<span class="d"><i>Aplica a:</i> ' + esc(e.aplica_a) + '</span>';
       if (e.no_aplica_a) h += '<span class="d"><i>No aplica a:</i> ' + esc(e.no_aplica_a) + '</span>';
-      if (!e.descripcion_revisada) h += '<span class="d aviso-txt">Esta descripción es automática y todavía no fue revisada por el equipo.</span>';
+      if (!e.descripcion_revisada) h += '<span class="d aviso-txt">Descripción sin validar por una persona. Para poder aprobar con este especialista hay que validarla en <a href="' + URL_ESP + '" target="_blank" rel="noopener">la página de especialistas</a> (después recarga esta página).</span>';
       h += '</span></label>';
     });
     h += '<label class="opcion' + (A.nueva ? ' elegida' : '') + '"><input type="radio" name="alta-esp" value="__nuevo__"' + (A.nueva ? ' checked' : '') + '>';

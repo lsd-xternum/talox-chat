@@ -138,3 +138,7 @@ body.solo-pendiente .campo-card.validado { display: none; }
 .fila-alta { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
 .malo-txt { color: var(--error); }
 @media (max-width: 640px) { .cuerpo { padding: 8px 16px 24px; } .opcion { padding: 10px; } }
+
+/* Página de especialistas */
+.chip-ok { display: inline-block; font-size: 12px; font-weight: 700; color: var(--verde-texto); background: #E3F3E6; border-radius: 999px; padding: 2px 10px; margin-left: 6px; }
+.chip-pend { display: inline-block; font-size: 12px; font-weight: 700; color: #8A5A00; background: #FFF1D6; border-radius: 999px; padding: 2px 10px; margin-left: 6px; }
