@@ -35,6 +35,8 @@
     hitl2_aprobado: 'Borrador aprobado: generando el documento', finalizado_con_exito: 'Documento listo',
     cancelado: 'Cancelado', error_sistema: 'Error del sistema', error_especialista: 'Error en la redacción'
   };
+  // Las frases por estado viven en el catálogo de estados (Supabase); las de arriba quedan como respaldo si no llegan.
+  if (cat.etapas) Object.keys(cat.etapas).forEach(function (k) { if (cat.etapas[k]) ETAPAS[k] = cat.etapas[k]; });
 
   function recordarNombre(v) { try { if (v != null) localStorage.setItem('talox_nombre', v); return localStorage.getItem('talox_nombre') || ''; } catch (e) { return ''; } }
 
