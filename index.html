@@ -1222,6 +1222,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
         }
         avisarPlantillasPendientes(url, headers);
         avisarEspecialistasPendientes(url, headers);
+        cargarCatalogoEstados(url, headers);
       } catch (err) {
         statusPill.className = "status-pill offline";
         statusPill.innerText = "Error de conexión";
@@ -1731,6 +1732,21 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
         appendMessage(`📝 **${lista.length === 1 ? 'Hay 1 plantilla esperando revisión' : 'Hay ' + lista.length + ' plantillas esperando revisión'}**\n\n${lineas.join('\n')}`, false);
       } catch (_) { /* el aviso es opcional: si falla, el muro sigue normal */ }
     }
+    // Catálogo de estados (tabla estados_solicitud): dice qué es cada estado y qué aviso corresponde.
+    // Si no carga, el chat sigue con las reglas que ya trae escritas.
+    let catalogoEstados = null;
+    async function cargarCatalogoEstados(url, headers) {
+      try {
+        const res = await fetch(`${url}/rest/v1/rpc/estados_solicitud_catalogo`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
+        if (!res.ok) return;
+        const lista = await res.json();
+        if (!Array.isArray(lista) || !lista.length) return;
+        catalogoEstados = new Map(lista.map(e => [e.estado, e]));
+      } catch (_) { /* opcional */ }
+    }
+    function infoEstado(estado) { return catalogoEstados ? (catalogoEstados.get(estado) || null) : null; }
+    // Estados que el chat ya sabe manejar por su cuenta (incluye nombres antiguos que ningún flujo escribe hoy).
+    const ESTADOS_CONOCIDOS_CHAT = ['hitl1_pendiente','hitl2_pendiente','hitl2_iterando','reintentando_especialista','datos_incompletos','error_sistema','error_especialista','finalizado_con_exito','completado','cancelado','detenido_hitl2'];
     async function avisarEspecialistasPendientes(url, headers) {
       try {
         const res = await fetch(`${url}/rest/v1/rpc/especialistas_pendientes`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
@@ -1863,7 +1879,8 @@ ${enlaceHtml(registro.hitl2_url, 'Abrir Pantalla de Revisión Final (HITL 2)')}`
 
         // Aviso mientras el especialista reescribe tras un ajuste pedido en HITL 2.
         // La marca de tiempo de la decisión identifica la iteración; los dos estados que la siguen cuentan como una sola.
-        if (registro.estado === 'hitl2_iterando' || registro.estado === 'reintentando_especialista') {
+        const infoEst = infoEstado(registro.estado);
+        if (registro.estado === 'hitl2_iterando' || registro.estado === 'reintentando_especialista' || (infoEst && infoEst.aviso === 'reescritura')) {
           const marcaIteracion = (registro.decision_hitl2 && registro.decision_hitl2.timestamp_decision)
             || `ronda${rondasHitl.get(`${registro.solicitud_id}_hitl2`) || 0}`;
           const claveReescritura = `${registro.solicitud_id}_reescritura_${marcaIteracion}`;
@@ -2004,6 +2021,19 @@ Búscalo en la carpeta de entregables de Drive o avisa al equipo de TaloX para r
             : `⚠️ El encargo \`${registro.solicitud_id}\` fue detenido en n8n (${registro.estado}).`;
           appendMessage(msgCancel, false);
           conversationHistory.push({ role: "assistant", content: msgCancel });
+          saveSessionState();
+        }
+      }
+
+      // 5. Estado que ni el catálogo ni el chat conocen: se avisa una vez y se deja constancia en la consola.
+      if (catalogoEstados && !infoEstado(registro.estado) && !ESTADOS_CONOCIDOS_CHAT.includes(registro.estado)) {
+        const claveDesconocido = `${registro.solicitud_id}_desconocido_${registro.estado}`;
+        if (!eventosProcesados.has(claveDesconocido)) {
+          eventosProcesados.add(claveDesconocido);
+          console.warn('[TaloX] Estado sin definir en el catálogo:', registro.estado, registro.solicitud_id);
+          const msgDesc = `ℹ️ El encargo \`${registro.solicitud_id}\` pasó a un estado que no tengo definido (\`${escHtml(String(registro.estado))}\`). Avisa al equipo de TaloX para darlo de alta.`;
+          appendMessage(msgDesc, false);
+          conversationHistory.push({ role: "assistant", content: msgDesc });
           saveSessionState();
         }
       }
