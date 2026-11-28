@@ -28,11 +28,11 @@
 
   /* ---------- Modo gestión (pedido ya confirmado) ---------- */
   var ETAPAS = {
-    iniciado: 'Preparando el encargo', triage_completado: 'Analizando insumos del cliente',
+    iniciado: 'Preparando el encargo',
     hitl1_pendiente: 'Esperando tu aprobación del encuadre', hitl1_aprobado: 'Encuadre aprobado: redactando',
     hitl1_iterando: 'Ajustando el encuadre', en_redaccion_especialista: 'Redactando el borrador',
-    en_auditoria_calidad: 'En auditoría de calidad', hitl2_pendiente: 'Esperando tu revisión del borrador',
-    hitl2_aprobado: 'Borrador aprobado: generando el documento', finalizado_con_exito: 'Documento listo',
+    hitl2_pendiente: 'Esperando tu revisión del borrador',
+    finalizado_con_exito: 'Documento listo',
     cancelado: 'Cancelado', error_sistema: 'Error del sistema', error_especialista: 'Error en la redacción'
   };
   // Las frases por estado viven en el catálogo de estados (Supabase); las de arriba quedan como respaldo si no llegan.

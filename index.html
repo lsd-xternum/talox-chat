@@ -1745,8 +1745,6 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       } catch (_) { /* opcional */ }
     }
     function infoEstado(estado) { return catalogoEstados ? (catalogoEstados.get(estado) || null) : null; }
-    // Estados que el chat ya sabe manejar por su cuenta (incluye nombres antiguos que ningún flujo escribe hoy).
-    const ESTADOS_CONOCIDOS_CHAT = ['hitl1_pendiente','hitl2_pendiente','hitl2_iterando','reintentando_especialista','datos_incompletos','error_sistema','error_especialista','finalizado_con_exito','completado','cancelado','detenido_hitl2'];
     async function avisarEspecialistasPendientes(url, headers) {
       try {
         const res = await fetch(`${url}/rest/v1/rpc/especialistas_pendientes`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
@@ -1880,7 +1878,7 @@ ${enlaceHtml(registro.hitl2_url, 'Abrir Pantalla de Revisión Final (HITL 2)')}`
         // Aviso mientras el especialista reescribe tras un ajuste pedido en HITL 2.
         // La marca de tiempo de la decisión identifica la iteración; los dos estados que la siguen cuentan como una sola.
         const infoEst = infoEstado(registro.estado);
-        if (registro.estado === 'hitl2_iterando' || registro.estado === 'reintentando_especialista' || (infoEst && infoEst.aviso === 'reescritura')) {
+        if (infoEst && infoEst.aviso === 'reescritura') {
           const marcaIteracion = (registro.decision_hitl2 && registro.decision_hitl2.timestamp_decision)
             || `ronda${rondasHitl.get(`${registro.solicitud_id}_hitl2`) || 0}`;
           const claveReescritura = `${registro.solicitud_id}_reescritura_${marcaIteracion}`;
@@ -1897,7 +1895,7 @@ Estoy redactando una nueva versión del borrador; te aviso apenas esté lista pa
       }
 
       // 2. Corte temprano por error del sistema: datos/esquema incompletos o fallo del especialista
-      if (['datos_incompletos', 'error_sistema', 'error_especialista'].includes(registro.estado)) {
+      if (['error_sistema', 'error_especialista'].includes(registro.estado)) {
         const claveError = `${registro.solicitud_id}_${registro.estado}`;
         if (!eventosProcesados.has(claveError)) {
           eventosProcesados.add(claveError);
@@ -1945,9 +1943,7 @@ Verifica que la plantilla y su esquema estén cargados en Supabase antes de rela
       }
 
       // 3. Finalizado con éxito (cierra canal y limpia tareas activas)
-      // El orquestador pasa de 'finalizado_con_exito' a 'completado' en pocos milisegundos;
-      // se aceptan ambos para no perder el aviso si la consulta llega después del segundo cambio.
-      if (registro.estado === 'finalizado_con_exito' || registro.estado === 'completado') {
+      if (registro.estado === 'finalizado_con_exito') {
         const claveFinal = `${registro.solicitud_id}_finalizado`;
         if (!eventosProcesados.has(claveFinal)) {
           eventosProcesados.add(claveFinal);
@@ -2010,7 +2006,7 @@ Búscalo en la carpeta de entregables de Drive o avisa al equipo de TaloX para r
       }
 
       // 4. Cancelado o detenido (cierra canal y limpia tareas activas)
-      if (registro.estado === 'cancelado' || registro.estado === 'detenido_hitl2') {
+      if (registro.estado === 'cancelado') {
         const claveCancel = `${registro.solicitud_id}_${registro.estado}`;
         if (!eventosProcesados.has(claveCancel)) {
           eventosProcesados.add(claveCancel);
@@ -2026,7 +2022,7 @@ Búscalo en la carpeta de entregables de Drive o avisa al equipo de TaloX para r
       }
 
       // 5. Estado que ni el catálogo ni el chat conocen: se avisa una vez y se deja constancia en la consola.
-      if (catalogoEstados && !infoEstado(registro.estado) && !ESTADOS_CONOCIDOS_CHAT.includes(registro.estado)) {
+      if (catalogoEstados && !infoEstado(registro.estado)) {
         const claveDesconocido = `${registro.solicitud_id}_desconocido_${registro.estado}`;
         if (!eventosProcesados.has(claveDesconocido)) {
           eventosProcesados.add(claveDesconocido);
