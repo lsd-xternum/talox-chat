@@ -1223,6 +1223,7 @@ Ya cargué la información base en el panel de encuadre. Revisemos el objetivo d
         avisarPlantillasPendientes(url, headers);
         avisarEspecialistasPendientes(url, headers);
         cargarCatalogoEstados(url, headers);
+        cargarCatalogoEventos(url, headers);
       } catch (err) {
         statusPill.className = "status-pill offline";
         statusPill.innerText = "Error de conexión";
@@ -1745,6 +1746,46 @@ El pipeline agéntico para **${clienteActual}** está ejecutándose en segundo p
       } catch (_) { /* opcional */ }
     }
     function infoEstado(estado) { return catalogoEstados ? (catalogoEstados.get(estado) || null) : null; }
+    // Catálogo de tipos de evento (tabla eventos_solicitud_tipos): cada tipo trae el texto de su mensaje.
+    let catalogoEventos = null;
+    async function cargarCatalogoEventos(url, headers) {
+      try {
+        const res = await fetch(`${url}/rest/v1/rpc/eventos_solicitud_catalogo`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
+        if (!res.ok) return;
+        const lista = await res.json();
+        if (!Array.isArray(lista) || !lista.length) return;
+        catalogoEventos = new Map(lista.map(e => [e.tipo, e]));
+      } catch (_) { /* opcional */ }
+    }
+    // De las entradas del log elige la que explica el cierre: la primera de un tipo conocido que no sea solo un aviso.
+    // Las entradas sin tipo (avisos de insumos) o de tipo informativo nunca se muestran como causa.
+    function eventoDeCierre(registro) {
+      const log = Array.isArray(registro.errores_log) ? registro.errores_log : (registro.errores_log ? [registro.errores_log] : []);
+      if (catalogoEventos) {
+        const hallado = log.find(l => l && l.tipo && catalogoEventos.has(l.tipo) && catalogoEventos.get(l.tipo).nivel !== 'warn' && catalogoEventos.get(l.tipo).cuerpo);
+        if (hallado) return { def: catalogoEventos.get(hallado.tipo), log: hallado };
+        const porDefecto = (infoEstado(registro.estado) || {}).tipo_evento_por_defecto;
+        if (porDefecto && catalogoEventos.has(porDefecto)) return { def: catalogoEventos.get(porDefecto), log: {} };
+      }
+      return null;
+    }
+    // Arma el texto desde la plantilla: {campo} sale del evento (o de su valor por defecto); una línea con un dato que falta se omite.
+    function textoDeEvento(def, log, registro) {
+      const dato = (k) => {
+        let v = k === 'id' ? registro.solicitud_id : k === 'estado' ? registro.estado : log[k];
+        if (def.valores && def.valores[k]) v = def.valores[k][v] !== undefined ? def.valores[k][v] : def.valores[k]['*'];
+        if (Array.isArray(v)) v = v.join(', ');
+        if (v === undefined || v === null || String(v).trim() === '') v = def.por_defecto ? def.por_defecto[k] : undefined;
+        return (v === undefined || v === null || String(v).trim() === '') ? null : String(v);
+      };
+      const armar = (plantilla) => plantilla.split('\n').map(linea => {
+        let falta = false;
+        const salida = linea.replace(/\{([a-z_]+)\}/g, (_, k) => { const v = dato(k); if (v === null) { falta = true; return ''; } return v; });
+        return falta ? null : salida;
+      }).filter(l => l !== null).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+      const principal = def.cuerpo ? armar(def.cuerpo) : '';
+      return principal || (def.cuerpo_alternativo ? armar(def.cuerpo_alternativo) : '');
+    }
     async function avisarEspecialistasPendientes(url, headers) {
       try {
         const res = await fetch(`${url}/rest/v1/rpc/especialistas_pendientes`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
@@ -1901,40 +1942,9 @@ Estoy redactando una nueva versión del borrador; te aviso apenas esté lista pa
           eventosProcesados.add(claveError);
           cerrarEscucha();
 
-          const log = Array.isArray(registro.errores_log) ? (registro.errores_log[0] || {}) : (registro.errores_log || {});
-          let mensajeAlerta;
-          if (log.tipo === 'limite_iteraciones') {
-            const etapa = log.etapa === 'hitl2' ? 'la revisión final' : 'la validación del encuadre';
-            mensajeAlerta = `🔁 **Se alcanzó el límite de 3 rondas en ${etapa}** (\`${registro.solicitud_id}\`).
-
-${log.mensaje || 'El encargo quedó detenido para evitar ciclos infinitos.'}`;
-          } else if (log.tipo === 'error_documento') {
-            mensajeAlerta = `📄 **No se pudo completar el documento final** (\`${registro.solicitud_id}\`).
-
-${log.mensaje || 'El borrador quedó guardado; puedes relanzar el encargo.'}`;
-          } else if (log.tipo === 'error_flujo') {
-            mensajeAlerta = `⚠️ **El proceso se interrumpió por un error inesperado** (\`${registro.solicitud_id}\`).
-
-${log.mensaje || 'Revisa la ejecución en n8n.'}
-
-El encargo quedó detenido; puedes relanzarlo cuando se resuelva la causa.`;
-          } else if (registro.estado === 'error_especialista' || log.tipo === 'fallo_especialista') {
-            mensajeAlerta = `⚠️ **Falló la redacción del encargo** (\`${registro.solicitud_id}\`).
-
-- **Motivo:** ${log.motivo || 'El especialista terminó con error. Revisa la ejecución en n8n.'}
-
-El encargo quedó detenido; puedes relanzarlo cuando se resuelva la causa.`;
-          } else {
-            const motivo = log.motivo || 'Falta el esquema del entregable o datos obligatorios para ejecutar el especialista.';
-            const faltantes = Array.isArray(log.campos_faltantes) && log.campos_faltantes.length > 0
-              ? `\n- **Campos faltantes:** \`${log.campos_faltantes.join(', ')}\``
-              : '';
-            mensajeAlerta = `⚠️ **Ejecución detenida por datos incompletos** (\`${registro.solicitud_id}\`).
-
-- **Motivo:** ${motivo}${faltantes}
-
-Verifica que la plantilla y su esquema estén cargados en Supabase antes de relanzar el encargo.`;
-          }
+          const evento = eventoDeCierre(registro);
+          let mensajeAlerta = evento ? textoDeEvento(evento.def, evento.log, registro) : '';
+          if (!mensajeAlerta) mensajeAlerta = `⚠️ El encargo \`${registro.solicitud_id}\` terminó con un error (${escHtml(String(registro.estado))}). Avisa al equipo de TaloX para revisarlo.`;
           appendMessage(mensajeAlerta, false);
           conversationHistory.push({ role: "assistant", content: mensajeAlerta });
           saveSessionState();
@@ -2011,10 +2021,9 @@ Búscalo en la carpeta de entregables de Drive o avisa al equipo de TaloX para r
         if (!eventosProcesados.has(claveCancel)) {
           eventosProcesados.add(claveCancel);
           cerrarEscucha();
-          const logC = Array.isArray(registro.errores_log) ? (registro.errores_log[0] || {}) : {};
-          const msgCancel = logC.tipo === 'cancelado' && logC.mensaje
-            ? `🛑 ${logC.mensaje} (\`${registro.solicitud_id}\`)`
-            : `⚠️ El encargo \`${registro.solicitud_id}\` fue detenido en n8n (${registro.estado}).`;
+          const eventoC = eventoDeCierre(registro);
+          let msgCancel = eventoC ? textoDeEvento(eventoC.def, eventoC.log, registro) : '';
+          if (!msgCancel) msgCancel = `⚠️ El encargo \`${registro.solicitud_id}\` fue detenido en n8n (${escHtml(String(registro.estado))}).`;
           appendMessage(msgCancel, false);
           conversationHistory.push({ role: "assistant", content: msgCancel });
           saveSessionState();
